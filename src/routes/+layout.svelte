@@ -1,17 +1,21 @@
 <script lang="ts">
 	import './layout.css';
 	import { onMount } from 'svelte';
+	import { DEV } from '$lib/utils';
 
+	import ToastProvider from '$lib/components/ToastProvider.svelte';
 	import NavBar from '$lib/components/NavBar.svelte';
 
 	onMount(() => {
-		if (import.meta.env.DEV) {
+		if (DEV) {
 			console.log('in dev mode');
 		}
 	});
 
 	let { children } = $props();
 </script>
+
+<ToastProvider />
 
 <NavBar />
 
