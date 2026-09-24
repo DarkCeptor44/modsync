@@ -1,4 +1,6 @@
-<script lang="ts">
+page
+
+<!-- <script lang="ts">
   import { invoke } from "@tauri-apps/api/core";
 
   let name = $state("");
@@ -153,4 +155,4 @@ button {
   }
 }
 
-</style>
+</style> -->
