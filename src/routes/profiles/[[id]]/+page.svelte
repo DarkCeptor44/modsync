@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { appState } from '$lib/api.svelte';
+	import { toast } from '$lib/toast.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 
@@ -14,15 +16,23 @@
 	let exclusions = $state<string[]>([]);
 	let newExclusion = $state('');
 
-	const isValid = $derived(name && source && destination);
+	let submitting = $state(false);
+
+	const isValid = $derived(name && source && destination && !submitting);
 	const hasAnyFields = $derived(name || source || destination || exclusions.length || newExclusion);
 
 	$effect(() => {
-		if (name) {
-			name = 'PAYDAY 2';
-			source = 'D:\\Mods\\Payday2';
-			destination = 'C:\\Games\\PAYDAY 2\\mods';
-			exclusions = ['base/', 'logs/', 'saves/'];
+		if (isEditing) {
+			const profile = appState.profiles.find((p) => p.id === profileId);
+			if (!profile) {
+				goto('/');
+				return;
+			}
+
+			name = profile.name;
+			source = profile.source;
+			destination = profile.destination;
+			exclusions = profile.exclusions || [];
 		} else {
 			name = '';
 			source = '';
@@ -46,10 +56,25 @@
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
 		if (!isValid) return;
+		if (submitting) return;
 
-		console.log('submit', name, source, destination, exclusions);
+		submitting = true;
+		try {
+			await appState.addProfile({
+				name: name.trim(),
+				source: source.trim(),
+				destination: destination.trim(),
+				exclusions
+			});
 
-		// goto('/');
+			toast.show('Profile added');
+			goto('/');
+		} catch (err) {
+			console.error(err);
+			toast.show(typeof err === 'string' ? err : 'Failed to add profile', 'error');
+		} finally {
+			submitting = false;
+		}
 	}
 
 	async function handleDelete() {
@@ -65,6 +90,10 @@
 		destination = '';
 		exclusions = [];
 		newExclusion = '';
+
+		if (isEditing) {
+			goto('/');
+		}
 	}
 </script>
 
@@ -94,6 +123,7 @@
 				bind:value={name}
 				placeholder="PAYDAY 2"
 				required
+				autocomplete="off"
 			/>
 		</div>
 		<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
@@ -103,6 +133,7 @@
 				bind:value={source}
 				placeholder="D:\Mods\Payday2"
 				required
+				autocomplete="off"
 			/>
 
 			<InputField
@@ -111,6 +142,7 @@
 				bind:value={destination}
 				placeholder="C:\Program Files\...\PAYDAY 2\mods"
 				required
+				autocomplete="off"
 			/>
 		</div>
 
@@ -121,6 +153,7 @@
 					label="Protected Paths (Exclusions)"
 					bind:value={newExclusion}
 					placeholder="base/, logs/, saves/"
+					autocomplete="off"
 				/>
 			</div>
 			<Button
