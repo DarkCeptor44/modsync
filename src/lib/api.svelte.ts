@@ -8,12 +8,12 @@ class AppState {
 
 	async addProfile(profile: ProfileInput) {
 		try {
-			await invoke('add_profile', { profile });
+			const id = await invoke<string>('add_profile', { profile });
 			if (DEV) {
 				console.log('added profile', profile);
 			}
 
-			await this.fetchProfiles();
+			this.profiles = [...this.profiles, { ...profile, id }];
 		} catch (err) {
 			console.error('Failed to save profile:', err);
 			throw err;

@@ -22,7 +22,7 @@ impl Config for Data {
 }
 
 impl Data {
-    pub fn add_profile(&mut self, profile: ProfileInput) -> Result<()> {
+    pub fn add_profile(&mut self, mut profile: ProfileInput) -> Result<String> {
         if profile.name.trim().is_empty() {
             return Err(anyhow!("Profile name cannot be empty"));
         }
@@ -35,28 +35,13 @@ impl Data {
             return Err(anyhow!("Profile destination cannot be empty"));
         }
 
-        let mut cleaned_exclusions = Vec::new();
-        for exclusion in profile.exclusions {
-            if exclusion.is_empty() {
-                continue;
-            }
-
-            cleaned_exclusions.push(exclusion);
-        }
+        profile.exclusions.retain(|e| !e.is_empty());
 
         let id = profile.name.trim().to_kebab_case();
-        self.profiles.insert(
-            id,
-            ProfileInput {
-                name: profile.name,
-                source: profile.source,
-                destination: profile.destination,
-                exclusions: cleaned_exclusions,
-            },
-        );
+        self.profiles.insert(id.clone(), profile);
         self.save()?;
 
-        Ok(())
+        Ok(id)
     }
 
     pub fn update_profile(&mut self, mut profile: Profile) -> Result<String> {

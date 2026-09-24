@@ -5,9 +5,7 @@ use crate::{
 use tauri::State;
 
 #[tauri::command]
-pub fn add_profile(state: State<'_, AppState>, profile: ProfileInput) -> Result<(), String> {
-    let msg = format!("added profile: {profile:?}");
-
+pub fn add_profile(state: State<'_, AppState>, profile: ProfileInput) -> Result<String, String> {
     let mut config = state.config.lock();
     if config
         .profiles
@@ -17,13 +15,14 @@ pub fn add_profile(state: State<'_, AppState>, profile: ProfileInput) -> Result<
         return Err("Profile name already exists".to_string());
     }
 
-    config.add_profile(profile).map_err(|e| e.to_string())?;
+    let msg = format!("added profile: {profile:?}");
+    let id = config.add_profile(profile).map_err(|e| e.to_string())?;
 
     if state.debug {
         println!("{msg}");
     }
 
-    Ok(())
+    Ok(id)
 }
 
 #[tauri::command]
