@@ -27,6 +27,27 @@ pub fn add_profile(state: State<'_, AppState>, profile: ProfileInput) -> Result<
 }
 
 #[tauri::command]
+pub fn edit_profile(state: State<'_, AppState>, profile: Profile) -> Result<String, String> {
+    if profile.id.trim().is_empty() {
+        return Err("Profile ID cannot be empty".to_string());
+    }
+
+    let mut config = state.config.lock();
+    if !config.profiles.contains_key(&profile.id) {
+        return Err("Profile not found".to_string());
+    }
+
+    let msg = format!("updated profile: {profile:?}");
+    let new_id = config.update_profile(profile).map_err(|e| e.to_string())?;
+
+    if state.debug {
+        println!("{msg}");
+    }
+
+    Ok(new_id)
+}
+
+#[tauri::command]
 pub fn get_profiles(state: State<'_, AppState>) -> Result<Vec<Profile>, String> {
     if state.debug {
         println!("getting profiles");

@@ -4,7 +4,7 @@ mod types;
 
 use crate::{
     config::Data,
-    storage::{add_profile, get_profiles, get_version},
+    storage::{add_profile, edit_profile, get_profiles, get_version},
 };
 use configura::load_config;
 use parking_lot::Mutex;
@@ -27,6 +27,7 @@ pub fn run(debug: bool) {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             add_profile,
+            edit_profile,
             get_profiles,
             get_version
         ])

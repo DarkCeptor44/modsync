@@ -60,18 +60,41 @@
 
 		submitting = true;
 		try {
-			await appState.addProfile({
-				name: name.trim(),
-				source: source.trim(),
-				destination: destination.trim(),
-				exclusions
-			});
+			if (isEditing) {
+				const newId = await appState.editProfile({
+					id: profileId ?? '',
+					name: name.trim(),
+					source: source.trim(),
+					destination: destination.trim(),
+					exclusions
+				});
 
-			toast.show('Profile added');
-			goto('/');
+				toast.show('Profile updated');
+
+				if (profileId !== newId) {
+					goto(`/profiles/${newId}`);
+				}
+			} else {
+				await appState.addProfile({
+					name: name.trim(),
+					source: source.trim(),
+					destination: destination.trim(),
+					exclusions
+				});
+
+				toast.show('Profile added');
+				goto('/');
+			}
 		} catch (err) {
 			console.error(err);
-			toast.show(typeof err === 'string' ? err : 'Failed to add profile', 'error');
+			toast.show(
+				typeof err === 'string'
+					? err
+					: isEditing
+						? 'Failed to update profile'
+						: 'Failed to add profile',
+				'error'
+			);
 		} finally {
 			submitting = false;
 		}
@@ -103,7 +126,7 @@
 			<h1 class="text-xl font-bold text-zinc-100">
 				{isEditing ? 'Edit Profile' : 'Create Profile'}
 			</h1>
-			{#if isEditing}
+			{#if isEditing && profileId}
 				<p class="font-mono text-xs text-zinc-500">ID: {profileId}</p>
 			{/if}
 		</div>

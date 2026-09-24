@@ -1,4 +1,4 @@
-use crate::types::ProfileInput;
+use crate::types::{Profile, ProfileInput};
 use anyhow::{Result, anyhow};
 use configura::{Config, formats::JsonFormat};
 use heck::ToKebabCase;
@@ -57,5 +57,36 @@ impl Data {
         self.save()?;
 
         Ok(())
+    }
+
+    pub fn update_profile(&mut self, mut profile: Profile) -> Result<String> {
+        if profile.id.trim().is_empty() {
+            return Err(anyhow!("Profile ID cannot be empty"));
+        }
+
+        let name = profile.name.trim();
+        if name.is_empty() {
+            return Err(anyhow!("Profile name cannot be empty"));
+        }
+
+        if profile.source.is_empty() {
+            return Err(anyhow!("Profile source cannot be empty"));
+        }
+
+        if profile.destination.is_empty() {
+            return Err(anyhow!("Profile destination cannot be empty"));
+        }
+
+        profile.exclusions.retain(|e| !e.is_empty());
+
+        let new_id = name.to_kebab_case();
+        if profile.id != new_id {
+            self.profiles.remove(&profile.id);
+        }
+
+        self.profiles.insert(new_id.clone(), profile.into());
+        self.save()?;
+
+        Ok(new_id)
     }
 }
