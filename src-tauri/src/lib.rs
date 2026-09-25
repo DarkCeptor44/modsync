@@ -3,7 +3,7 @@
 
 mod config;
 mod storage;
-mod sync;
+pub mod sync;
 mod types;
 
 use crate::{

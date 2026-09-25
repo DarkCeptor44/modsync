@@ -1,4 +1,4 @@
 mod compare;
-mod fs;
+pub mod fs;
 mod types;
 mod utils;
