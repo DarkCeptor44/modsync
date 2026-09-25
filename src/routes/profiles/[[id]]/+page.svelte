@@ -86,7 +86,6 @@
 				goto('/');
 			}
 		} catch (err) {
-			console.error(err);
 			toast.show(
 				typeof err === 'string'
 					? err
