@@ -53,6 +53,18 @@ class AppState {
 			this.loading = false;
 		}
 	}
+
+	async syncProfile(profile: Profile) {
+		try {
+			await invoke('sync_profile', { profile });
+			if (DEV) {
+				console.log('syncing profile', profile);
+			}
+		} catch (err) {
+			console.error('Failed to sync profile:', err);
+			throw err;
+		}
+	}
 }
 
 export const appState = new AppState();

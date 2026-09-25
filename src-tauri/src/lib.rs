@@ -4,7 +4,7 @@ mod types;
 
 use crate::{
     config::Data,
-    storage::{add_profile, edit_profile, get_profiles, get_version},
+    storage::{add_profile, edit_profile, get_profiles, get_version, sync_profile},
 };
 use configura::load_config;
 use parking_lot::Mutex;
@@ -29,7 +29,8 @@ pub fn run(debug: bool) {
             add_profile,
             edit_profile,
             get_profiles,
-            get_version
+            get_version,
+            sync_profile
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

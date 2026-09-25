@@ -9,10 +9,6 @@
 
 		console.log('profiles', $state.snapshot(appState.profiles));
 	});
-
-	function handleSync(profileId: string) {
-		console.log('syncing', profileId);
-	}
 </script>
 
 <div class="mb-6 flex items-center justify-between">
@@ -60,7 +56,7 @@
 
 				<div class="flex shrink-0 items-center gap-2">
 					<Button href="/profiles/{profile.id}" textSize="text-xs">Edit</Button>
-					<Button onclick={() => handleSync(profile.id)} textSize="text-xs">Sync</Button>
+					<Button href="/sync/{profile.id}" textSize="text-xs">Sync</Button>
 				</div>
 			</div>
 		{/each}

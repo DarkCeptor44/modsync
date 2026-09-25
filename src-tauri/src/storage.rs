@@ -66,3 +66,11 @@ pub fn get_profiles(state: State<'_, AppState>) -> Result<Vec<Profile>, String> 
 pub fn get_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
 }
+
+#[tauri::command]
+pub fn sync_profile(state: State<'_, AppState>, profile: Profile) -> Result<(), String> {
+    if state.debug {
+        println!("syncing profile: profile={profile:?}");
+    }
+    Ok(())
+}
