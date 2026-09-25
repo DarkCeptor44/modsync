@@ -1,7 +1,62 @@
 use crate::sync::{compare::should_sync, types::SyncOutcome};
 use anyhow::{Context, Result, anyhow};
-use std::path::Path;
-use tokio::fs::{copy, create_dir_all, hard_link, metadata};
+use std::{
+    collections::HashSet,
+    path::{Path, PathBuf},
+};
+use tokio::{
+    fs::{copy, create_dir_all, hard_link, metadata},
+    task::spawn_blocking,
+};
+use walkdir::WalkDir;
+
+/// Collect source files
+///
+/// ## Arguments
+///
+/// * `root` - path to root directory
+/// * `exclusions` - list of paths to exclude
+///
+/// ## Errors
+///
+/// Returns error if task join failed
+///
+/// ## Returns
+///
+/// Set of source files
+pub async fn collect_source_files(root: &Path, exclusions: &[PathBuf]) -> Result<HashSet<PathBuf>> {
+    let root = root.to_path_buf();
+    let exclusions = exclusions.to_vec();
+
+    spawn_blocking(move || {
+        let mut set = HashSet::new();
+
+        for entry in WalkDir::new(&root)
+            .min_depth(1)
+            .into_iter()
+            .filter_entry(|e| {
+                if let Ok(rel) = e.path().strip_prefix(&root) {
+                    let is_excluded = exclusions.iter().any(|ex| rel.starts_with(ex) || rel == ex);
+
+                    !is_excluded
+                } else {
+                    true
+                }
+            })
+        {
+            let entry = entry.context("Failed to read directory entry")?;
+            if entry.file_type().is_file()
+                && let Ok(rel_path) = entry.path().strip_prefix(&root)
+            {
+                set.insert(rel_path.to_path_buf());
+            }
+        }
+
+        Ok(set)
+    })
+    .await
+    .context("Task join failed")?
+}
 
 /// Link or copy file
 ///
@@ -86,6 +141,38 @@ mod tests {
     use crate::sync::types::SyncAction;
     use tempfile::tempdir;
     use tokio::fs::{read, read_to_string, write};
+
+    #[tokio::test]
+    async fn test_collect_source_files() {
+        let temp_dir = tempdir().unwrap();
+        let root = temp_dir.path();
+
+        create_dir_all(root.join("subfolder")).await.unwrap();
+        create_dir_all(root.join("excluded_folder")).await.unwrap();
+
+        write(root.join("file1.txt"), "data").await.unwrap();
+        write(root.join("subfolder").join("file2.txt"), "data")
+            .await
+            .unwrap();
+        write(root.join("excluded_folder").join("file3.txt"), "data")
+            .await
+            .unwrap();
+        write(root.join("skip_me.log"), "data").await.unwrap();
+
+        let exclusions = vec![
+            PathBuf::from("excluded_folder"),
+            PathBuf::from("skip_me.log"),
+        ];
+
+        let files = collect_source_files(root, &exclusions).await.unwrap();
+
+        assert_eq!(files.len(), 2);
+        assert!(files.contains(&PathBuf::from("file1.txt")));
+        assert!(files.contains(&PathBuf::from("subfolder").join("file2.txt")));
+
+        assert!(!files.contains(&PathBuf::from("excluded_folder").join("file3.txt")));
+        assert!(!files.contains(&PathBuf::from("skip_me.log")));
+    }
 
     #[tokio::test]
     async fn test_link_or_copy() {
