@@ -15,7 +15,7 @@ pub fn add_profile(state: State<'_, AppState>, profile: ProfileInput) -> Result<
         return Err("Profile name already exists".to_string());
     }
 
-    let msg = format!("added profile: {profile:?}");
+    let msg = format!("added profile: profile={profile:?}");
     let id = config.add_profile(profile).map_err(|e| e.to_string())?;
 
     if state.debug {
@@ -36,7 +36,7 @@ pub fn edit_profile(state: State<'_, AppState>, profile: Profile) -> Result<Stri
         return Err("Profile not found".to_string());
     }
 
-    let msg = format!("updated profile: {profile:?}");
+    let msg = format!("updated profile: profile={profile:?}");
     let new_id = config.update_profile(profile).map_err(|e| e.to_string())?;
 
     if state.debug {
