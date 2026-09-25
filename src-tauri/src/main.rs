@@ -2,7 +2,11 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use clap::Parser;
+use colored::Colorize;
 use dotenvy::dotenv;
+use std::process::exit;
+
+const NAME: &str = env!("CARGO_BIN_NAME");
 
 #[derive(Debug, Parser)]
 #[command(version, about, long_about = None)]
@@ -20,5 +24,8 @@ fn main() {
     dotenv().ok();
 
     let args = App::parse();
-    modsync_lib::run(args.debug || cfg!(debug_assertions))
+    if let Err(e) = modsync_lib::run(args.debug || cfg!(debug_assertions)) {
+        eprintln!("{}", format!("{NAME}: {e:?}").red());
+        exit(1);
+    }
 }

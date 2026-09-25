@@ -1,3 +1,5 @@
+#![allow(clippy::needless_pass_by_value)]
+
 use crate::{
     AppState,
     types::{Profile, ProfileInput},
@@ -47,7 +49,7 @@ pub fn edit_profile(state: State<'_, AppState>, profile: Profile) -> Result<Stri
 }
 
 #[tauri::command]
-pub fn get_profiles(state: State<'_, AppState>) -> Result<Vec<Profile>, String> {
+pub fn get_profiles(state: State<'_, AppState>) -> Vec<Profile> {
     if state.debug {
         println!("getting profiles");
     }
@@ -59,7 +61,7 @@ pub fn get_profiles(state: State<'_, AppState>) -> Result<Vec<Profile>, String> 
         .map(|(k, v)| (k.clone(), v.clone()).into())
         .collect();
 
-    Ok(profiles)
+    profiles
 }
 
 #[tauri::command]
@@ -68,7 +70,7 @@ pub fn get_version() -> String {
 }
 
 #[tauri::command]
-pub fn sync_profile(state: State<'_, AppState>, profile: Profile) -> Result<(), String> {
+pub async fn sync_profile(state: State<'_, AppState>, profile: Profile) -> Result<(), String> {
     if state.debug {
         println!("syncing profile: profile={profile:?}");
     }
