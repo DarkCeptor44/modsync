@@ -8,7 +8,7 @@ use std::{
     path::{Path, PathBuf},
 };
 use tokio::{
-    fs::{copy, create_dir_all, hard_link, metadata},
+    fs::{copy, create_dir_all, hard_link, metadata, remove_file, symlink_metadata},
     task::spawn_blocking,
 };
 use walkdir::WalkDir;
@@ -61,6 +61,53 @@ pub async fn collect_files(root: &Path, exclusions: &[PathBuf]) -> Result<HashSe
     .context("Task join failed")?
 }
 
+/// Removes file or link if it exists
+///
+/// ## Arguments
+///
+/// * `base` - base path
+/// * `entry` - entry to remove
+/// * `dry_run` - dry run
+///
+/// ## Returns
+///
+/// The outcome of the removal operation
+pub async fn handle_removal(base: &Path, entry: &Path, dry_run: bool) -> SyncOutcome {
+    async fn inner(base: &Path, entry: &Path, dry_run: bool) -> Result<SyncAction> {
+        let dst = base.join(entry);
+        let dst_meta = symlink_metadata(&dst)
+            .await
+            .context(anyhow!("Failed to read metadata for: {}", dst.display()))?;
+
+        if !dst_meta.is_file() && !dst_meta.is_symlink() {
+            return Err(anyhow!("Not a file or symlink: {}", dst.display()));
+        }
+
+        if !dry_run {
+            remove_file(&dst)
+                .await
+                .context(anyhow!("Failed to remove file: {}", dst.display()))?;
+        }
+
+        Ok(SyncAction::Removed {
+            bytes: dst_meta.len(),
+        })
+    }
+
+    match inner(base, entry, dry_run).await {
+        Ok(action) => SyncOutcome {
+            entry: entry.to_path_buf(),
+            action,
+        },
+        Err(e) => SyncOutcome {
+            entry: entry.to_path_buf(),
+            action: SyncAction::Failed {
+                error: e.to_string(),
+            },
+        },
+    }
+}
+
 /// Link or copy file
 ///
 /// First it tries to create a hard link, if not possible then it copies the file. You can also force a copy with `force_copy`
@@ -100,13 +147,9 @@ pub async fn link_or_copy(src: &Path, dst: &Path, force_copy: bool) -> Result<()
 /// * `dst` - destination path
 /// * `dry_run` - dry run
 ///
-/// ## Errors
-///
-/// Returns error if file can't be opened or read
-///
 /// ## Returns
 ///
-/// Sync outcome
+/// Outcome for the sync operation
 pub async fn sync_file(base: &Path, entry: &Path, dst: &Path, dry_run: bool) -> SyncOutcome {
     async fn inner(base: &Path, entry: &Path, dst: &Path, dry_run: bool) -> Result<SyncAction> {
         let src = base.join(entry);
@@ -194,6 +237,55 @@ mod tests {
 
         assert!(!files.contains(&PathBuf::from("excluded_folder").join("file3.txt")));
         assert!(!files.contains(&PathBuf::from("skip_me.log")));
+    }
+
+    #[tokio::test]
+    async fn test_handle_removal_file() {
+        let temp_dir = tempdir().unwrap();
+        let base = temp_dir.path();
+        let relative_entry = Path::new("file_to_remove.txt");
+        let target_path = base.join(relative_entry);
+
+        write(&target_path, "test contents").await.unwrap();
+        assert!(target_path.is_file());
+
+        let outcome = handle_removal(base, relative_entry, false).await;
+        match outcome.action {
+            SyncAction::Removed { bytes } => {
+                assert_eq!(bytes, 13);
+            }
+            _ => panic!("Expected SyncAction::Removed, got {:?}", outcome.action),
+        }
+
+        assert!(!target_path.is_file());
+    }
+
+    #[tokio::test]
+    async fn test_handle_removal_symlink() {
+        let temp_dir = tempdir().expect("Failed to create temp dir");
+        let base = temp_dir.path();
+        let relative_entry = Path::new("symlink_to_remove");
+        let symlink_path = base.join(relative_entry);
+
+        #[cfg(unix)]
+        tokio::fs::symlink("non_existent_target.txt", &symlink_path)
+            .await
+            .unwrap();
+
+        #[cfg(windows)]
+        tokio::fs::symlink_file("non_existent_target.txt", &symlink_path)
+            .await
+            .unwrap();
+
+        assert!(symlink_metadata(&symlink_path).await.is_ok());
+
+        let outcome = handle_removal(base, relative_entry, false).await;
+        match outcome.action {
+            SyncAction::Removed { .. } => {}
+            _ => panic!("Expected SyncAction::Removed, got {:?}", outcome.action),
+        }
+
+        assert!(symlink_metadata(&symlink_path).await.is_err());
     }
 
     #[tokio::test]
