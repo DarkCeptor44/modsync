@@ -7,7 +7,7 @@ use tokio::{
 use twox_hash::XxHash64;
 
 const FULL_CHECK_THRESHOLD: u64 = 50 * 1024 * 1024; // 50 MB
-const QUICK_CHECK_SIZE: usize = 4096;
+pub const QUICK_CHECK_SIZE: usize = 4096;
 
 /// Calculate full hash for file
 ///
