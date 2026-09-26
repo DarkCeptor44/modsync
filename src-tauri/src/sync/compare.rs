@@ -1,8 +1,8 @@
 use anyhow::Result;
-use std::{hash::Hasher, path::Path};
+use std::{hash::Hasher, io::SeekFrom, path::Path};
 use tokio::{
     fs::{File, metadata},
-    io::{AsyncBufReadExt, AsyncReadExt, BufReader},
+    io::{AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncSeekExt, BufReader},
 };
 use twox_hash::XxHash64;
 
@@ -13,22 +13,24 @@ const QUICK_CHECK_SIZE: usize = 4096;
 ///
 /// ## Arguments
 ///
-/// * `path` - path to file
+/// * `reader` - reader for file
 ///
 /// ## Errors
 ///
-/// Returns error if file can't be opened or read
+/// Returns error if reader can't be read
 ///
 /// ## Returns
 ///
 /// Hash of file
-pub async fn calculate_full_hash(path: &Path) -> Result<u64> {
-    let mut file = File::open(path).await?;
+pub async fn calculate_full_hash<R>(mut reader: R) -> Result<u64>
+where
+    R: AsyncRead + Unpin,
+{
     let mut hasher = XxHash64::default();
-    let mut buffer = vec![0u8; 65536].into_boxed_slice();
+    let mut buffer = vec![0u8; 16384];
 
     loop {
-        let bytes_read = file.read(&mut buffer).await?;
+        let bytes_read = reader.read(&mut buffer).await?;
         if bytes_read == 0 {
             break;
         }
@@ -42,18 +44,20 @@ pub async fn calculate_full_hash(path: &Path) -> Result<u64> {
 ///
 /// ## Arguments
 ///
-/// * `path` - path to file
+/// * `reader` - reader for file
 ///
 /// ## Errors
 ///
-/// Returns error if file can't be opened or read
+/// Returns error if buffer can't be filled
 ///
 /// ## Returns
 ///
 /// Hash of file
-pub async fn calculate_quick_hash(path: &Path) -> Result<u64> {
-    let file = File::open(path).await?;
-    let mut buffer = BufReader::with_capacity(QUICK_CHECK_SIZE, file);
+pub async fn calculate_quick_hash<R>(reader: R) -> Result<u64>
+where
+    R: AsyncRead + Unpin,
+{
+    let mut buffer = BufReader::with_capacity(QUICK_CHECK_SIZE, reader);
     let bytes_read = buffer.fill_buf().await?;
     Ok(XxHash64::oneshot(0, bytes_read))
 }
@@ -88,8 +92,11 @@ pub async fn should_sync(src: &Path, dst: &Path, src_len: u64) -> Result<bool> {
         return Ok(false);
     }
 
-    let src_quick = calculate_quick_hash(src).await?;
-    let dst_quick = calculate_quick_hash(dst).await?;
+    let mut src_file = File::open(src).await?;
+    let mut dst_file = File::open(dst).await?;
+
+    let src_quick = calculate_quick_hash(&mut src_file).await?;
+    let dst_quick = calculate_quick_hash(&mut dst_file).await?;
 
     if src_quick != dst_quick {
         return Ok(true);
@@ -97,8 +104,11 @@ pub async fn should_sync(src: &Path, dst: &Path, src_len: u64) -> Result<bool> {
 
     // if file is <= 50MB, do a full content hash as a final check
     if src_len <= FULL_CHECK_THRESHOLD {
-        let src_full = calculate_full_hash(src).await?;
-        let dst_full = calculate_full_hash(dst).await?;
+        src_file.seek(SeekFrom::Start(0)).await?;
+        dst_file.seek(SeekFrom::Start(0)).await?;
+
+        let src_full = calculate_full_hash(src_file).await?;
+        let dst_full = calculate_full_hash(dst_file).await?;
         return Ok(src_full != dst_full);
     }
 
@@ -110,16 +120,22 @@ mod tests {
     use super::*;
     use std::{io::Write, time::Duration};
     use tempfile::NamedTempFile;
-    use tokio::time::sleep;
+    use tokio::{io::AsyncWriteExt, time::sleep};
 
     #[tokio::test]
     async fn test_full_hash_consistency() {
-        let mut file = NamedTempFile::new().unwrap();
-        file.write_all(b"consistent data payload").unwrap();
-        file.flush().unwrap();
+        let temp = NamedTempFile::new().unwrap();
+        let std = temp.into_file();
+        let mut file = File::from_std(std);
 
-        let hash1 = calculate_full_hash(file.path()).await.unwrap();
-        let hash2 = calculate_full_hash(file.path()).await.unwrap();
+        file.write_all(b"consistent data payload").await.unwrap();
+        file.flush().await.unwrap();
+
+        file.seek(SeekFrom::Start(0)).await.unwrap();
+        let hash1 = calculate_full_hash(&mut file).await.unwrap();
+
+        file.seek(SeekFrom::Start(0)).await.unwrap();
+        let hash2 = calculate_full_hash(file).await.unwrap();
 
         assert_eq!(
             hash1, hash2,
@@ -129,21 +145,29 @@ mod tests {
 
     #[tokio::test]
     async fn test_full_hash_detects_tail_changes() {
-        let mut file1 = NamedTempFile::new().unwrap();
-        let mut file2 = NamedTempFile::new().unwrap();
-
+        let temp1 = NamedTempFile::new().unwrap();
+        let temp2 = NamedTempFile::new().unwrap();
         let prefix = vec![0xAA; 4096];
 
-        file1.write_all(&prefix).unwrap();
-        file1.write_all(b"tail data AAAAAA").unwrap();
-        file1.flush().unwrap();
+        let std1 = temp1.into_file();
+        let std2 = temp2.into_file();
 
-        file2.write_all(&prefix).unwrap();
-        file2.write_all(b"tail data BBBBBB").unwrap();
-        file2.flush().unwrap();
+        let mut async1 = File::from_std(std1);
+        let mut async2 = File::from_std(std2);
 
-        let hash1 = calculate_full_hash(file1.path()).await.unwrap();
-        let hash2 = calculate_full_hash(file2.path()).await.unwrap();
+        async1.write_all(&prefix).await.unwrap();
+        async1.write_all(b"tail data AAAAAA").await.unwrap();
+        async1.flush().await.unwrap();
+
+        async2.write_all(&prefix).await.unwrap();
+        async2.write_all(b"tail data BBBBBB").await.unwrap();
+        async2.flush().await.unwrap();
+
+        async1.seek(SeekFrom::Start(0)).await.unwrap();
+        async2.seek(SeekFrom::Start(0)).await.unwrap();
+
+        let hash1 = calculate_full_hash(async1).await.unwrap();
+        let hash2 = calculate_full_hash(async2).await.unwrap();
 
         assert_ne!(
             hash1, hash2,
@@ -225,21 +249,26 @@ mod tests {
 
     #[tokio::test]
     async fn test_quick_hash_reads_only_prefix() {
-        let mut file1 = NamedTempFile::new().unwrap();
-        let mut file2 = NamedTempFile::new().unwrap();
-
+        let temp1 = NamedTempFile::new().unwrap();
+        let temp2 = NamedTempFile::new().unwrap();
         let prefix = vec![0xAA; 4096];
 
-        file1.write_all(&prefix).unwrap();
-        file1.write_all(b"tail data AAAAAA").unwrap();
-        file1.flush().unwrap();
+        let std1 = temp1.into_file();
+        let std2 = temp2.into_file();
 
-        file2.write_all(&prefix).unwrap();
-        file2.write_all(b"tail data BBBBBB").unwrap();
-        file2.flush().unwrap();
+        let mut async1 = File::from_std(std1);
+        let mut async2 = File::from_std(std2);
 
-        let hash1 = calculate_quick_hash(file1.path()).await.unwrap();
-        let hash2 = calculate_quick_hash(file2.path()).await.unwrap();
+        async1.write_all(&prefix).await.unwrap();
+        async1.write_all(b"tail data AAAAAA").await.unwrap();
+        async1.flush().await.unwrap();
+
+        async2.write_all(&prefix).await.unwrap();
+        async2.write_all(b"tail data BBBBBB").await.unwrap();
+        async2.flush().await.unwrap();
+
+        let hash1 = calculate_quick_hash(async1).await.unwrap();
+        let hash2 = calculate_quick_hash(async2).await.unwrap();
 
         assert_eq!(
             hash1, hash2,
