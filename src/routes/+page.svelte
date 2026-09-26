@@ -33,17 +33,19 @@
 {:else}
 	<div class="flex flex-col gap-3">
 		{#each appState.profiles as profile (profile.id)}
+			{@const exclusions = profile.syncExclusions.length + profile.deleteExclusions.length}
+
 			<div
 				class="flex items-center justify-between rounded-xl border border-zinc-800 bg-zinc-900/60 p-4"
 			>
 				<div class="flex min-w-0 flex-col gap-1 pr-4">
 					<div class="flex items-center gap-2">
 						<span class="truncate font-semibold text-zinc-100">{profile.name}</span>
-						{#if profile.exclusions.length}
+						{#if exclusions > 0}
 							<span
 								class="rounded border border-zinc-800 bg-zinc-950 px-1.5 py-0.5 text-[10px] text-zinc-400"
 							>
-								{profile.exclusions.length} exclusions
+								{exclusions} exclusions
 							</span>
 						{/if}
 					</div>

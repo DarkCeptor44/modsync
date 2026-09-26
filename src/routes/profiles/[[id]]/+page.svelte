@@ -6,6 +6,7 @@
 
 	import Button from '$lib/components/Button.svelte';
 	import InputField from '$lib/components/InputField.svelte';
+	import ExclusionForm from '$lib/components/ExclusionForm.svelte';
 
 	const profileId = $derived(page.params.id);
 	const isEditing = $derived(Boolean(profileId));
@@ -13,13 +14,23 @@
 	let name = $state('');
 	let source = $state('');
 	let destination = $state('');
-	let exclusions = $state<string[]>([]);
-	let newExclusion = $state('');
+	let syncExclusions = $state<string[]>([]);
+	let newSyncExclusion = $state('');
+	let deleteExclusions = $state<string[]>([]);
+	let newDeleteExclusion = $state('');
 
 	let submitting = $state(false);
 
 	const isValid = $derived(name && source && destination && !submitting);
-	const hasAnyFields = $derived(name || source || destination || exclusions.length || newExclusion);
+	const hasAnyFields = $derived(
+		name ||
+			source ||
+			destination ||
+			syncExclusions.length ||
+			newSyncExclusion ||
+			deleteExclusions.length ||
+			newDeleteExclusion
+	);
 
 	$effect(() => {
 		if (isEditing) {
@@ -32,26 +43,16 @@
 			name = profile.name;
 			source = profile.source;
 			destination = profile.destination;
-			exclusions = profile.exclusions || [];
+			syncExclusions = profile.syncExclusions || [];
+			deleteExclusions = profile.deleteExclusions || [];
 		} else {
 			name = '';
 			source = '';
 			destination = '';
-			exclusions = [];
+			syncExclusions = [];
+			deleteExclusions = [];
 		}
 	});
-
-	function addExclusion() {
-		if (!newExclusion.trim()) return;
-		if (newExclusion.trim()) {
-			exclusions = [...exclusions, newExclusion.trim()];
-			newExclusion = '';
-		}
-	}
-
-	function removeExclusion(index: number) {
-		exclusions = exclusions.filter((_, i) => i !== index);
-	}
 
 	async function handleSubmit(e: Event) {
 		e.preventDefault();
@@ -66,7 +67,8 @@
 					name: name.trim(),
 					source: source.trim(),
 					destination: destination.trim(),
-					exclusions
+					syncExclusions,
+					deleteExclusions
 				});
 
 				toast.show('Profile updated');
@@ -79,7 +81,8 @@
 					name: name.trim(),
 					source: source.trim(),
 					destination: destination.trim(),
-					exclusions
+					syncExclusions,
+					deleteExclusions
 				});
 
 				toast.show('Profile added');
@@ -110,8 +113,10 @@
 		name = '';
 		source = '';
 		destination = '';
-		exclusions = [];
-		newExclusion = '';
+		syncExclusions = [];
+		newSyncExclusion = '';
+		deleteExclusions = [];
+		newDeleteExclusion = '';
 
 		if (isEditing) {
 			goto('/');
@@ -168,42 +173,21 @@
 			/>
 		</div>
 
-		<div class="flex items-end gap-2">
-			<div class="flex-1">
-				<InputField
-					id="exclusion-input"
-					label="Protected Paths (Exclusions)"
-					bind:value={newExclusion}
-					placeholder="base/, logs/, saves/"
-					autocomplete="off"
-				/>
-			</div>
-			<Button
-				variant="secondary"
-				onclick={addExclusion}
-				class="h-9.5 px-4"
-				disabled={!newExclusion.trim()}>Add</Button
-			>
-		</div>
+		<ExclusionForm
+			id="sync-exclusions"
+			label="Protected Paths In Sync"
+			bind:newExclusion={newSyncExclusion}
+			bind:exclusions={syncExclusions}
+		/>
 
-		<div class="grid grid-cols-12 gap-2">
-			<div class="mt-3 flex flex-wrap gap-2">
-				{#each exclusions as item, i}
-					<span
-						class="inline-flex items-center gap-1.5 rounded-md border border-rose-800/40 bg-rose-950/30 px-2.5 py-1 font-mono text-xs text-rose-300"
-					>
-						{item}
-						<button
-							type="button"
-							onclick={() => removeExclusion(i)}
-							class="text-rose-400 hover:text-rose-200">&times;</button
-						>
-					</span>
-				{/each}
-			</div>
-		</div>
+		<ExclusionForm
+			id="delete-exclusions"
+			label="Protected Paths In Delete"
+			bind:newExclusion={newDeleteExclusion}
+			bind:exclusions={deleteExclusions}
+		/>
 
-		<div class="flex items-center justify-between gap-2">
+		<div class="mt-3 flex items-center justify-between gap-2">
 			{#if isEditing}
 				<Button variant="danger" onclick={handleDelete}>Delete Profile</Button>
 			{:else}

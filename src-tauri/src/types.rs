@@ -2,12 +2,14 @@ use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Profile {
     pub id: String,
     pub name: String,
     pub source: PathBuf,
     pub destination: PathBuf,
-    pub exclusions: Vec<PathBuf>,
+    pub sync_exclusions: Vec<PathBuf>,
+    pub delete_exclusions: Vec<PathBuf>,
 }
 
 impl From<(String, ProfileInput)> for Profile {
@@ -17,17 +19,20 @@ impl From<(String, ProfileInput)> for Profile {
             name: value.1.name,
             source: value.1.source,
             destination: value.1.destination,
-            exclusions: value.1.exclusions,
+            sync_exclusions: value.1.sync_exclusions,
+            delete_exclusions: value.1.delete_exclusions,
         }
     }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct ProfileInput {
     pub name: String,
     pub source: PathBuf,
     pub destination: PathBuf,
-    pub exclusions: Vec<PathBuf>,
+    pub sync_exclusions: Vec<PathBuf>,
+    pub delete_exclusions: Vec<PathBuf>,
 }
 
 impl From<Profile> for ProfileInput {
@@ -36,7 +41,8 @@ impl From<Profile> for ProfileInput {
             name: value.name,
             source: value.source,
             destination: value.destination,
-            exclusions: value.exclusions,
+            sync_exclusions: value.sync_exclusions,
+            delete_exclusions: value.delete_exclusions,
         }
     }
 }

@@ -8,6 +8,7 @@ use std::collections::HashMap;
 const CONFIG_NAME: &str = env!("CARGO_PKG_NAME");
 
 #[derive(Debug, Default, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
 pub struct Data {
     pub profiles: HashMap<String, ProfileInput>,
 }
@@ -35,7 +36,8 @@ impl Data {
             return Err(anyhow!("Profile destination cannot be empty"));
         }
 
-        profile.exclusions.retain(|e| !e.is_empty());
+        profile.sync_exclusions.retain(|e| !e.is_empty());
+        profile.delete_exclusions.retain(|e| !e.is_empty());
 
         let id = profile.name.trim().to_kebab_case();
         self.profiles.insert(id.clone(), profile);
@@ -62,7 +64,8 @@ impl Data {
             return Err(anyhow!("Profile destination cannot be empty"));
         }
 
-        profile.exclusions.retain(|e| !e.is_empty());
+        profile.sync_exclusions.retain(|e| !e.is_empty());
+        profile.delete_exclusions.retain(|e| !e.is_empty());
 
         let new_id = name.to_kebab_case();
         if profile.id != new_id {
