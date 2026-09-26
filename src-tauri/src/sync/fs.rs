@@ -60,18 +60,25 @@ pub async fn collect_source_files(root: &Path, exclusions: &[PathBuf]) -> Result
 
 /// Link or copy file
 ///
-/// First it tries to create a hard link, if not possible then it copies the file
+/// First it tries to create a hard link, if not possible then it copies the file. You can also force a copy with `force_copy`
 ///
 /// ## Arguments
 ///
 /// * `src` - path to source file
 /// * `dst` - path to destination file
+/// * `force_copy` - force copy
 ///
 /// ## Errors
 ///
-/// Returns error if file can't be opened or read
-pub async fn link_or_copy(src: &Path, dst: &Path) -> Result<()> {
-    if hard_link(src, dst).await.is_err() {
+/// Returns error if file can't be linked or copied
+pub async fn link_or_copy(src: &Path, dst: &Path, force_copy: bool) -> Result<()> {
+    let link_failed = if force_copy {
+        true
+    } else {
+        hard_link(src, dst).await.is_err()
+    };
+
+    if link_failed {
         copy(src, dst).await.context(anyhow!(
             "Failed to copy: {} -> {}",
             src.display(),
@@ -125,7 +132,7 @@ pub async fn sync_file(
             ))?;
         }
 
-        link_or_copy(&src, dst).await.context(anyhow!(
+        link_or_copy(&src, dst, false).await.context(anyhow!(
             "Failed to link or copy `{}` to `{}`",
             src.display(),
             dst.display()
@@ -175,14 +182,32 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_link_or_copy() {
+    async fn test_link_or_copy_copy() {
         let temp_dir = tempdir().expect("Failed to create temp dir");
         let temp_path = temp_dir.path();
         let src = temp_path.join("src");
         let dst = temp_path.join("dst");
 
         write(&src, "test").await.expect("Failed to write to src");
-        link_or_copy(&src, &dst)
+        link_or_copy(&src, &dst, true)
+            .await
+            .expect("Failed to copy");
+
+        assert_eq!(
+            read_to_string(&dst).await.expect("Failed to read dst"),
+            "test"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_link_or_copy_link() {
+        let temp_dir = tempdir().expect("Failed to create temp dir");
+        let temp_path = temp_dir.path();
+        let src = temp_path.join("src");
+        let dst = temp_path.join("dst");
+
+        write(&src, "test").await.expect("Failed to write to src");
+        link_or_copy(&src, &dst, false)
             .await
             .expect("Failed to link or copy");
 
