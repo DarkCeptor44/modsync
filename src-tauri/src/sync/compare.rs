@@ -24,9 +24,9 @@ pub const QUICK_CHECK_SIZE: usize = 4096;
 /// Hash of file
 pub async fn calculate_full_hash<R>(mut reader: R) -> Result<u64>
 where
-    R: AsyncRead + Unpin,
+    R: AsyncRead + Unpin + Send,
 {
-    async fn inner(reader: &mut (dyn AsyncRead + Unpin)) -> Result<u64> {
+    async fn inner(reader: &mut (dyn AsyncRead + Unpin + Send)) -> Result<u64> {
         let mut hasher = XxHash64::default();
         let mut buffer = vec![0u8; 16384];
 
@@ -59,9 +59,9 @@ where
 /// Hash of file
 pub async fn calculate_quick_hash<R>(mut reader: R) -> Result<u64>
 where
-    R: AsyncRead + Unpin,
+    R: AsyncRead + Unpin + Send,
 {
-    async fn inner(reader: &mut (dyn AsyncRead + Unpin)) -> Result<u64> {
+    async fn inner(reader: &mut (dyn AsyncRead + Unpin + Send)) -> Result<u64> {
         let mut buffer = BufReader::with_capacity(QUICK_CHECK_SIZE, reader);
         let bytes_read = buffer.fill_buf().await?;
         Ok(XxHash64::oneshot(0, bytes_read))
