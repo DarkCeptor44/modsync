@@ -13,7 +13,7 @@ use tokio::{
 };
 use walkdir::WalkDir;
 
-/// Collect source files
+/// Collect files
 ///
 /// ## Arguments
 ///
@@ -26,8 +26,8 @@ use walkdir::WalkDir;
 ///
 /// ## Returns
 ///
-/// Set of source files
-pub async fn collect_source_files(root: &Path, exclusions: &[PathBuf]) -> Result<HashSet<PathBuf>> {
+/// Set of files
+pub async fn collect_files(root: &Path, exclusions: &[PathBuf]) -> Result<HashSet<PathBuf>> {
     let root = root.to_path_buf();
     let exclusions = exclusions.to_vec();
 
@@ -47,7 +47,7 @@ pub async fn collect_source_files(root: &Path, exclusions: &[PathBuf]) -> Result
                 }
             })
         {
-            let entry = entry.context("Failed to read directory entry")?;
+            let entry = entry.context("Failed to read entry")?;
             if entry.file_type().is_file()
                 && let Ok(rel_path) = entry.path().strip_prefix(&root)
             {
@@ -165,7 +165,7 @@ mod tests {
     use tokio::fs::{read, read_to_string, write};
 
     #[tokio::test]
-    async fn test_collect_source_files() {
+    async fn test_collect_files() {
         let temp_dir = tempdir().unwrap();
         let root = temp_dir.path();
 
@@ -186,7 +186,7 @@ mod tests {
             PathBuf::from("skip_me.log"),
         ];
 
-        let files = collect_source_files(root, &exclusions).await.unwrap();
+        let files = collect_files(root, &exclusions).await.unwrap();
 
         assert_eq!(files.len(), 2);
         assert!(files.contains(&PathBuf::from("file1.txt")));

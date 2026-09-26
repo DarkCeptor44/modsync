@@ -25,9 +25,8 @@ fn collect_files(b: Bencher, n: usize) {
     let dir = setup_test_dirs(n, MAX_DEPTH).unwrap();
     let handle = rt.handle();
 
-    b.counter(ItemsCount::new(n)).bench(|| {
-        handle.block_on(async { black_box(lib::collect_source_files(dir.path(), &[]).await) })
-    });
+    b.counter(ItemsCount::new(n))
+        .bench(|| handle.block_on(async { black_box(lib::collect_files(dir.path(), &[]).await) }));
 }
 
 mod link_or_copy {
