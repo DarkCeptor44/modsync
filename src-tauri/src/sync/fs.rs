@@ -1,4 +1,7 @@
-use crate::sync::{compare::should_sync, types::SyncOutcome};
+use crate::sync::{
+    compare::should_sync,
+    types::{SyncAction, SyncOutcome},
+};
 use anyhow::{Context, Result, anyhow};
 use std::{
     collections::HashSet,
@@ -104,42 +107,54 @@ pub async fn link_or_copy(src: &Path, dst: &Path, force_copy: bool) -> Result<()
 /// ## Returns
 ///
 /// Sync outcome
-pub async fn sync_file(
-    base: &Path,
-    entry: &Path,
-    dst: &Path,
-    dry_run: bool,
-) -> Result<SyncOutcome> {
-    let src = base.join(entry);
-    let src_meta = metadata(&src)
-        .await
-        .context("Failed to get metadata for source")?;
+pub async fn sync_file(base: &Path, entry: &Path, dst: &Path, dry_run: bool) -> SyncOutcome {
+    async fn inner(base: &Path, entry: &Path, dst: &Path, dry_run: bool) -> Result<SyncAction> {
+        let src = base.join(entry);
+        let src_meta = metadata(&src)
+            .await
+            .context("Failed to get metadata for source")?;
 
-    if !src_meta.is_file() {
-        return Err(anyhow!("Not a file: {}", src.display()));
-    }
+        if !src_meta.is_file() {
+            return Err(anyhow!("Not a file: {}", src.display()));
+        }
 
-    let src_len = src_meta.len();
-    if !should_sync(&src, dst, src_len).await? {
-        return Ok(SyncOutcome::skipped(entry.to_path_buf()));
-    }
+        let src_len = src_meta.len();
+        if !should_sync(&src, dst, src_len).await? {
+            return Ok(SyncAction::Skipped);
+        }
 
-    if !dry_run {
-        if let Some(parent) = dst.parent() {
-            create_dir_all(parent).await.context(anyhow!(
-                "Failed to create parent directory for: {}",
+        if !dry_run {
+            if let Some(parent) = dst.parent() {
+                create_dir_all(parent).await.context(anyhow!(
+                    "Failed to create parent directory for: {}",
+                    dst.display()
+                ))?;
+            }
+
+            link_or_copy(&src, dst, false).await.context(anyhow!(
+                "Failed to link or copy `{}` to `{}`",
+                src.display(),
                 dst.display()
             ))?;
         }
 
-        link_or_copy(&src, dst, false).await.context(anyhow!(
-            "Failed to link or copy `{}` to `{}`",
-            src.display(),
-            dst.display()
-        ))?;
+        Ok(SyncAction::Copied {
+            bytes: src_meta.len(),
+        })
     }
 
-    Ok(SyncOutcome::copied(entry.to_path_buf(), src_meta.len()))
+    match inner(base, entry, dst, dry_run).await {
+        Ok(action) => SyncOutcome {
+            entry: entry.to_path_buf(),
+            action,
+        },
+        Err(e) => SyncOutcome {
+            entry: entry.to_path_buf(),
+            action: SyncAction::Failed {
+                error: e.to_string(),
+            },
+        },
+    }
 }
 
 #[cfg(test)]
@@ -229,9 +244,7 @@ mod tests {
         write(&full_src, b"mod data payload").await.unwrap();
 
         let full_dst = dst_dir.path().join(&relative_entry);
-        let outcome = sync_file(src_dir.path(), &relative_entry, &full_dst, false)
-            .await
-            .unwrap();
+        let outcome = sync_file(src_dir.path(), &relative_entry, &full_dst, false).await;
 
         assert_eq!(outcome.entry, relative_entry);
         assert_eq!(outcome.action, SyncAction::Copied { bytes: 16 });
@@ -249,9 +262,7 @@ mod tests {
         write(&full_src, b"dry run payload").await.unwrap();
 
         let full_dst = dst_dir.path().join(relative_entry);
-        let outcome = sync_file(src_dir.path(), relative_entry, &full_dst, true)
-            .await
-            .unwrap();
+        let outcome = sync_file(src_dir.path(), relative_entry, &full_dst, true).await;
 
         assert_eq!(outcome.action, SyncAction::Copied { bytes: 15 });
         assert!(
@@ -273,9 +284,7 @@ mod tests {
         write(&full_src, payload).await.unwrap();
         write(&full_dst, payload).await.unwrap();
 
-        let outcome = sync_file(src_dir.path(), relative_entry, &full_dst, false)
-            .await
-            .unwrap();
+        let outcome = sync_file(src_dir.path(), relative_entry, &full_dst, false).await;
 
         assert_eq!(outcome.action, SyncAction::Skipped);
     }
