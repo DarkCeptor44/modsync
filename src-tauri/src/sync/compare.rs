@@ -26,18 +26,22 @@ pub async fn calculate_full_hash<R>(mut reader: R) -> Result<u64>
 where
     R: AsyncRead + Unpin,
 {
-    let mut hasher = XxHash64::default();
-    let mut buffer = vec![0u8; 16384];
+    async fn inner(reader: &mut (dyn AsyncRead + Unpin)) -> Result<u64> {
+        let mut hasher = XxHash64::default();
+        let mut buffer = vec![0u8; 16384];
 
-    loop {
-        let bytes_read = reader.read(&mut buffer).await?;
-        if bytes_read == 0 {
-            break;
+        loop {
+            let bytes_read = reader.read(&mut buffer).await?;
+            if bytes_read == 0 {
+                break;
+            }
+            hasher.write(&buffer[..bytes_read]);
         }
-        hasher.write(&buffer[..bytes_read]);
+
+        Ok(hasher.finish())
     }
 
-    Ok(hasher.finish())
+    inner(&mut reader).await
 }
 
 /// Calculate quick hash for file
@@ -53,13 +57,17 @@ where
 /// ## Returns
 ///
 /// Hash of file
-pub async fn calculate_quick_hash<R>(reader: R) -> Result<u64>
+pub async fn calculate_quick_hash<R>(mut reader: R) -> Result<u64>
 where
     R: AsyncRead + Unpin,
 {
-    let mut buffer = BufReader::with_capacity(QUICK_CHECK_SIZE, reader);
-    let bytes_read = buffer.fill_buf().await?;
-    Ok(XxHash64::oneshot(0, bytes_read))
+    async fn inner(reader: &mut (dyn AsyncRead + Unpin)) -> Result<u64> {
+        let mut buffer = BufReader::with_capacity(QUICK_CHECK_SIZE, reader);
+        let bytes_read = buffer.fill_buf().await?;
+        Ok(XxHash64::oneshot(0, bytes_read))
+    }
+
+    inner(&mut reader).await
 }
 
 /// Check if file should be synced
