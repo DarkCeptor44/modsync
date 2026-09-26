@@ -37,6 +37,7 @@ impl SyncOutcome {
 pub enum SyncAction {
     Copied { bytes: u64 },
     Removed { bytes: u64 },
+    RemovedDir,
     Skipped,
     Failed { error: String },
 }

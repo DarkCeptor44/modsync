@@ -5,13 +5,61 @@ use crate::sync::{
 use anyhow::{Context, Result, anyhow};
 use std::{
     collections::HashSet,
+    fs::read_dir,
     path::{Path, PathBuf},
 };
 use tokio::{
-    fs::{copy, create_dir_all, hard_link, metadata, remove_file, symlink_metadata},
+    fs::{copy, create_dir_all, hard_link, metadata, remove_dir, remove_file, symlink_metadata},
     task::spawn_blocking,
 };
 use walkdir::WalkDir;
+
+/// Collect empty directories
+///
+/// ## Arguments
+///
+/// * `root` - path to root directory
+/// * `exclusions` - list of paths to exclude
+///
+/// ## Errors
+///
+/// Returns error if task join fails
+///
+/// ## Returns
+///
+/// Set of empty directories
+pub async fn collect_empty_dirs(root: &Path, exclusions: &[PathBuf]) -> Result<HashSet<PathBuf>> {
+    let root = root.to_path_buf();
+    let exclusions = exclusions.to_vec();
+
+    spawn_blocking(move || {
+        let mut set = HashSet::new();
+
+        for entry in WalkDir::new(&root)
+            .min_depth(1)
+            .contents_first(true)
+            .into_iter()
+            .filter_map(std::result::Result::ok)
+        {
+            let path = entry.path();
+            let Ok(rel) = path.strip_prefix(&root) else {
+                continue;
+            };
+
+            if exclusions.iter().any(|ex| rel.starts_with(ex) || rel == ex) {
+                continue;
+            }
+
+            if entry.file_type().is_dir() && is_dir_empty(path) {
+                set.insert(rel.to_path_buf());
+            }
+        }
+
+        Ok(set)
+    })
+    .await
+    .context("Task join failed")?
+}
 
 /// Collect files
 ///
@@ -39,9 +87,7 @@ pub async fn collect_files(root: &Path, exclusions: &[PathBuf]) -> Result<HashSe
             .into_iter()
             .filter_entry(|e| {
                 if let Ok(rel) = e.path().strip_prefix(&root) {
-                    let is_excluded = exclusions.iter().any(|ex| rel.starts_with(ex) || rel == ex);
-
-                    !is_excluded
+                    !exclusions.iter().any(|ex| rel.starts_with(ex))
                 } else {
                     true
                 }
@@ -106,6 +152,48 @@ pub async fn handle_removal(base: &Path, entry: &Path, dry_run: bool) -> SyncOut
             },
         },
     }
+}
+
+pub async fn handle_dir_removal(base: &Path, entry: &Path, dry_run: bool) -> SyncOutcome {
+    async fn inner(base: &Path, entry: &Path, dry_run: bool) -> Result<SyncAction> {
+        let dst = base.join(entry);
+        let dst_meta = metadata(&dst)
+            .await
+            .context(anyhow!("Failed to read metadata for: {}", dst.display()))?;
+
+        if !dst_meta.is_dir() {
+            return Err(anyhow!("Not a directory: {}", dst.display()));
+        }
+
+        if !is_dir_empty(&dst) {
+            return Err(anyhow!("Directory is not empty: {}", dst.display()));
+        }
+
+        if !dry_run {
+            remove_dir(&dst)
+                .await
+                .context(anyhow!("Failed to remove directory: {}", dst.display()))?;
+        }
+
+        Ok(SyncAction::RemovedDir)
+    }
+
+    match inner(base, entry, dry_run).await {
+        Ok(action) => SyncOutcome {
+            entry: entry.to_path_buf(),
+            action,
+        },
+        Err(e) => SyncOutcome {
+            entry: entry.to_path_buf(),
+            action: SyncAction::Failed {
+                error: e.to_string(),
+            },
+        },
+    }
+}
+
+fn is_dir_empty(path: &Path) -> bool {
+    read_dir(path).is_ok_and(|mut entries| entries.next().is_none())
 }
 
 /// Link or copy file
@@ -205,7 +293,38 @@ mod tests {
     use super::*;
     use crate::sync::types::SyncAction;
     use tempfile::tempdir;
-    use tokio::fs::{read, read_to_string, write};
+    use tokio::fs::{create_dir, read, read_to_string, write};
+
+    #[tokio::test]
+    async fn test_collect_empty_dirs_conflict() {
+        let temp_dir = tempdir().unwrap();
+        let root = temp_dir.path();
+
+        create_dir_all(root.join("subfolder")).await.unwrap();
+        write(root.join("subfolder").join("file1.txt"), "data")
+            .await
+            .unwrap();
+
+        let dirs = collect_empty_dirs(root, &[]).await.unwrap();
+        assert_eq!(dbg!(&dirs).len(), 0);
+        assert!(!dirs.contains(&PathBuf::from("subfolder")));
+    }
+
+    #[tokio::test]
+    async fn test_collect_empty_dirs_success() {
+        let temp_dir = tempdir().unwrap();
+        let root = temp_dir.path();
+
+        create_dir_all(root.join("subfolder")).await.unwrap();
+        create_dir_all(root.join("excluded_folder")).await.unwrap();
+
+        let exclusions = vec![PathBuf::from("excluded_folder")];
+        let dirs = collect_empty_dirs(root, &exclusions).await.unwrap();
+
+        assert_eq!(dbg!(&dirs).len(), 1);
+        assert!(dirs.contains(&PathBuf::from("subfolder")));
+        assert!(!dirs.contains(&PathBuf::from("excluded_folder")));
+    }
 
     #[tokio::test]
     async fn test_collect_files() {
@@ -237,6 +356,46 @@ mod tests {
 
         assert!(!files.contains(&PathBuf::from("excluded_folder").join("file3.txt")));
         assert!(!files.contains(&PathBuf::from("skip_me.log")));
+    }
+
+    #[tokio::test]
+    async fn test_handle_dir_removal_conflict() {
+        let temp_dir = tempdir().unwrap();
+        let base = temp_dir.path();
+        let relative_entry = Path::new("dir_to_remove");
+
+        let full_path = base.join(relative_entry);
+        create_dir(&full_path).await.unwrap();
+        write(full_path.join("file1.txt"), b"some data")
+            .await
+            .unwrap();
+        assert!(relative_entry.is_dir());
+
+        let outcome = handle_dir_removal(base, relative_entry, false).await;
+        assert!(
+            matches!(outcome.action, SyncAction::Failed { .. }),
+            "Expected SyncAction::Failed for non-empty directory, got {:?}",
+            outcome.action
+        );
+    }
+
+    #[tokio::test]
+    async fn test_handle_dir_removal_empty() {
+        let temp_dir = tempdir().unwrap();
+        let base = temp_dir.path();
+        let relative_entry = Path::new("dir_to_remove");
+
+        let full_path = base.join(relative_entry);
+        create_dir(&full_path).await.unwrap();
+
+        let outcome = handle_dir_removal(base, relative_entry, false).await;
+        assert_eq!(
+            outcome.action,
+            SyncAction::RemovedDir,
+            "Expected SyncAction::RemovedDir for empty directory, got {:?}",
+            outcome.action
+        );
+        assert!(!full_path.is_dir());
     }
 
     #[tokio::test]
