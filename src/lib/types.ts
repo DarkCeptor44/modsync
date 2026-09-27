@@ -20,3 +20,7 @@ export type SyncAction =
 	| { Failed: { error: string } }
 	| 'RemovedDir'
 	| 'Skipped';
+
+export interface Settings {
+	jobs: number;
+}

@@ -46,3 +46,9 @@ impl From<Profile> for ProfileInput {
         }
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Settings {
+    pub jobs: usize,
+}

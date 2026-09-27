@@ -11,6 +11,7 @@ const CONFIG_NAME: &str = env!("CARGO_PKG_NAME");
 #[serde(rename_all = "camelCase")]
 pub struct Data {
     pub profiles: HashMap<String, ProfileInput>,
+    pub concurrency_limit: Option<usize>,
 }
 
 impl Config for Data {

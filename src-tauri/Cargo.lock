@@ -2244,6 +2244,7 @@ dependencies = [
  "divan",
  "dotenvy",
  "heck 0.5.0",
+ "num-traits",
  "num_cpus",
  "parking_lot",
  "serde",

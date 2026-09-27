@@ -1,4 +1,4 @@
-import type { Profile, ProfileInput, SyncAction, SyncOutcome } from './types';
+import type { Profile, ProfileInput, Settings, SyncAction, SyncOutcome } from './types';
 import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import { invoke } from '@tauri-apps/api/core';
 import { DEV } from './utils';
@@ -8,6 +8,7 @@ class AppState {
 	loading = $state(false);
 	outcomes = $state<SyncOutcome[]>([]);
 	currentOutcome = $state<SyncOutcome | null>(null);
+	settings = $state<Settings>({ jobs: 1 });
 
 	async addProfile(profile: ProfileInput) {
 		try {
@@ -54,6 +55,29 @@ class AppState {
 			throw err;
 		} finally {
 			this.loading = false;
+		}
+	}
+
+	async fetchSettings() {
+		try {
+			this.settings = await invoke<Settings>('get_settings');
+		} catch (err) {
+			console.error('Failed to fetch settings:', err);
+			throw err;
+		}
+	}
+
+	async saveSettings(settings: Settings) {
+		try {
+			await invoke('save_settings', { settings });
+			if (DEV) {
+				console.log('saving settings:', settings);
+			}
+
+			this.settings = settings;
+		} catch (err) {
+			console.error('Failed to save settings:', err);
+			throw err;
 		}
 	}
 

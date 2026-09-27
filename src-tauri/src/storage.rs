@@ -3,8 +3,10 @@
 use crate::{
     AppState,
     sync::{sync, types::SyncOutcome},
-    types::{Profile, ProfileInput},
+    types::{Profile, ProfileInput, Settings},
 };
+use configura::Config;
+use num_traits::ToPrimitive;
 use tauri::{AppHandle, Emitter, State};
 use tokio::{spawn, sync::mpsc};
 
@@ -51,6 +53,29 @@ pub fn edit_profile(state: State<'_, AppState>, profile: Profile) -> Result<Stri
 }
 
 #[tauri::command]
+pub fn get_settings(state: State<'_, AppState>) -> Settings {
+    if state.debug {
+        println!("getting concurrency limit");
+    }
+
+    let config = state.config.lock();
+    let saved_limit = config.concurrency_limit;
+
+    Settings {
+        jobs: saved_limit
+            .unwrap_or_else(|| {
+                let cpus = num_cpus::get();
+
+                (cpus.to_f64().unwrap_or(1.0) * 0.75)
+                    .ceil()
+                    .to_usize()
+                    .unwrap_or(1)
+            })
+            .max(1),
+    }
+}
+
+#[tauri::command]
 pub fn get_profiles(state: State<'_, AppState>) -> Vec<Profile> {
     if state.debug {
         println!("getting profiles");
@@ -69,6 +94,17 @@ pub fn get_profiles(state: State<'_, AppState>) -> Vec<Profile> {
 #[tauri::command]
 pub fn get_version() -> String {
     env!("CARGO_PKG_VERSION").to_string()
+}
+
+#[tauri::command]
+pub fn save_settings(state: State<'_, AppState>, settings: Settings) -> Result<(), String> {
+    if state.debug {
+        println!("saving settings: settings={settings:?}");
+    }
+
+    let mut config = state.config.lock();
+    config.concurrency_limit = Some(settings.jobs);
+    config.save().map_err(|e| e.to_string())
 }
 
 #[tauri::command]

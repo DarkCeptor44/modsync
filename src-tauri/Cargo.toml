@@ -26,6 +26,7 @@ colored = "3.1.1"
 configura = "1.1.0"
 dotenvy = "0.15.7"
 heck = "0.5.0"
+num-traits = "0.2.19"
 num_cpus = "1.17.0"
 parking_lot = "0.12.5"
 serde = { version = "1.0.229", features = ["derive"] }
