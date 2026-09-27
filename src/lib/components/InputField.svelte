@@ -7,7 +7,7 @@
 		id: string;
 		type?: 'text' | 'number' | 'time' | 'date' | 'url' | 'password';
 		placeholder?: string;
-		value: any;
+		value: string | number | null;
 		required?: boolean;
 		row?: boolean;
 		prefix?: string;
@@ -33,14 +33,23 @@
 	}: Props = $props();
 
 	function handleInput(e: Event & { currentTarget: HTMLInputElement }) {
-		let newValue = e.currentTarget.value;
+		let rawValue = e.currentTarget.value;
 
 		if (transform) {
-			newValue = transform(newValue);
-			e.currentTarget.value = newValue;
+			rawValue = transform(rawValue);
+			e.currentTarget.value = rawValue;
 		}
 
-		value = newValue;
+		if (type === 'number') {
+			if (rawValue.trim() === '') {
+				value = null;
+			} else {
+				const parsed = Number(rawValue);
+				value = Number.isNaN(parsed) ? null : parsed;
+			}
+		} else {
+			value = rawValue;
+		}
 
 		if (typeof oninput === 'function') {
 			oninput(e);
