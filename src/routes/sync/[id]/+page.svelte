@@ -11,7 +11,6 @@
 	import Toggle from '$lib/components/Toggle.svelte';
 
 	let { data } = $props();
-
 	const profile = $derived(data.profile);
 
 	onMount(() => {

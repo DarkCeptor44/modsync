@@ -98,7 +98,7 @@ class AppState {
 				}
 			});
 
-			await invoke('sync_profile', { profile, dryRun });
+			await invoke('sync_profile', { profile, dryRun, settings: this.settings });
 
 			if (DEV) {
 				console.log(

@@ -7,7 +7,7 @@ use crate::{
         fs::{collect_empty_dirs, collect_files, handle_dir_removal, handle_removal, sync_file},
         types::{SyncAction, SyncOutcome},
     },
-    types::Profile,
+    types::{Profile, Settings},
 };
 use anyhow::{Context, Result, anyhow};
 use std::{collections::HashSet, path::PathBuf, sync::Arc};
@@ -32,7 +32,7 @@ use tokio::{
 pub async fn sync(
     profile: &Profile,
     tx: UnboundedSender<SyncOutcome>,
-    concurrency_limit: usize,
+    settings: Settings,
     dry_run: bool,
 ) -> Result<()> {
     let src = Arc::new(profile.source.clone());
@@ -50,7 +50,7 @@ pub async fn sync(
         Arc::new(collect_files(&src, &profile.sync_exclusions).await?);
 
     // 1st pass: sync files from src to dst
-    let semaphore = Arc::new(Semaphore::new(concurrency_limit));
+    let semaphore = Arc::new(Semaphore::new(settings.jobs));
     let mut set: JoinSet<Result<SyncOutcome>> = JoinSet::new();
     let src_files_ref = src_files.clone();
 
@@ -96,7 +96,7 @@ pub async fn sync(
     let files_to_remove: HashSet<PathBuf> = dst_files.difference(&src_files).cloned().collect();
 
     // 2nd pass: remove dst files that are not in src
-    let semaphore = Arc::new(Semaphore::new(concurrency_limit));
+    let semaphore = Arc::new(Semaphore::new(settings.jobs));
     let mut set: JoinSet<Result<SyncOutcome>> = JoinSet::new();
 
     for entry in &files_to_remove {
@@ -136,7 +136,7 @@ pub async fn sync(
     }
 
     // 3rd pass: remove empty directories left over
-    let semaphore = Arc::new(Semaphore::new(concurrency_limit));
+    let semaphore = Arc::new(Semaphore::new(settings.jobs));
     let mut set: JoinSet<Result<SyncOutcome>> = JoinSet::new();
 
     let dirs_to_remove = collect_empty_dirs(&dst, &profile.delete_exclusions).await?;

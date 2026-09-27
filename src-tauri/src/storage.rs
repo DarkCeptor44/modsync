@@ -113,6 +113,7 @@ pub async fn sync_profile(
     state: State<'_, AppState>,
     profile: Profile,
     dry_run: bool,
+    settings: Settings,
 ) -> Result<(), String> {
     if state.debug {
         println!("syncing profile: profile={profile:?} dry_run={dry_run}");
@@ -126,7 +127,7 @@ pub async fn sync_profile(
         }
     });
 
-    let result = sync(&profile, tx, num_cpus::get(), true)
+    let result = sync(&profile, tx, settings, true)
         .await
         .map_err(|e| e.to_string());
     let _ = listener.await;
