@@ -1,13 +1,16 @@
 <script lang="ts">
 	import { appState } from '$lib/api.svelte';
 	import { onMount } from 'svelte';
+	import { DEV } from '$lib/utils';
 
 	import Button from '$lib/components/Button.svelte';
 
 	onMount(() => {
 		appState.fetchProfiles();
 
-		console.log('profiles', $state.snapshot(appState.profiles));
+		if (DEV) {
+			console.log('profiles', $state.snapshot(appState.profiles));
+		}
 	});
 </script>
 

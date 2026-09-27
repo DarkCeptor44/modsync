@@ -1,8 +1,10 @@
 <script lang="ts">
 	import type { SyncOutcome } from '$lib/types.js';
 	import { appState } from '$lib/api.svelte';
+	import { onMount } from 'svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { fade } from 'svelte/transition';
+	import { DEV } from '$lib/utils.js';
 
 	import Textarea from '$lib/components/Textarea.svelte';
 	import Button from '$lib/components/Button.svelte';
@@ -11,6 +13,12 @@
 	let { data } = $props();
 
 	const profile = $derived(data.profile);
+
+	onMount(() => {
+		if (DEV) {
+			console.log('profile:', $state.snapshot(profile));
+		}
+	});
 
 	let syncing = $state(false);
 	let dryRun = $state(false);
