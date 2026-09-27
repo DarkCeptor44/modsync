@@ -57,7 +57,11 @@ class AppState {
 		}
 	}
 
-	async syncProfile(profile: Profile, onProgress?: (outcome: SyncOutcome) => void) {
+	async syncProfile(
+		profile: Profile,
+		dryRun: boolean,
+		onProgress?: (outcome: SyncOutcome) => void
+	) {
 		let unlisten: UnlistenFn | undefined;
 
 		try {
@@ -70,10 +74,15 @@ class AppState {
 				}
 			});
 
-			await invoke('sync_profile', { profile });
+			await invoke('sync_profile', { profile, dryRun });
 
 			if (DEV) {
-				console.log('synced profile successfully', $state.snapshot(profile));
+				console.log(
+					'synced profile successfully',
+					$state.snapshot(profile),
+					'dryRun:',
+					$state.snapshot(dryRun)
+				);
 			}
 		} catch (err) {
 			console.error('Failed to sync profile:', err);

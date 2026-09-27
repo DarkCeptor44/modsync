@@ -6,12 +6,14 @@
 
 	import Textarea from '$lib/components/Textarea.svelte';
 	import Button from '$lib/components/Button.svelte';
+	import Toggle from '$lib/components/Toggle.svelte';
 
 	let { data } = $props();
 
 	const profile = $derived(data.profile);
 
 	let syncing = $state(false);
+	let dryRun = $state(false);
 	let logOutput = $state('');
 
 	async function handleSync() {
@@ -22,7 +24,7 @@
 		appendLog(`[INFO] Starting sync for profile: ${profile.name}`);
 
 		try {
-			await appState.syncProfile(profile, (out) => {
+			await appState.syncProfile(profile, dryRun, (out) => {
 				const formatted = formatOutcome(out);
 				if (formatted) {
 					appendLog(formatted);
@@ -40,7 +42,9 @@
 	}
 
 	function appendLog(message: string) {
-		logOutput = logOutput ? `${logOutput}\n${message}` : message;
+		logOutput = logOutput
+			? `${logOutput}\n${dryRun ? '[DRY-RUN] ' : ''}${message}`
+			: `${dryRun ? '[DRY-RUN] ' : ''}${message}`;
 	}
 
 	function formatOutcome(out: SyncOutcome): string {
@@ -81,7 +85,18 @@
 
 <div class="flex flex-col gap-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6">
 	<div class="grid grid-cols-1 gap-4">
-		<Button onclick={handleSync} disabled={syncing}>{syncing ? 'Syncing...' : 'Sync Mods'}</Button>
+		<div class="flex items-center gap-3">
+			<Toggle
+				id="dry-run-sync"
+				disabled={syncing}
+				bind:checked={dryRun}
+				checkedColorClass="bg-emerald-500"
+				uncheckedColorClass="bg-amber-500">Dry Run</Toggle
+			>
+			<Button onclick={handleSync} disabled={syncing} class="flex-1" textSize="text-sm">
+				{syncing ? (dryRun ? 'Simulating...' : 'Syncing...') : dryRun ? 'Simulate' : 'Sync Mods'}
+			</Button>
+		</div>
 		<Textarea
 			bind:value={logOutput}
 			id="sync-progress"

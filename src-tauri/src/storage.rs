@@ -76,9 +76,10 @@ pub async fn sync_profile(
     app: AppHandle,
     state: State<'_, AppState>,
     profile: Profile,
+    dry_run: bool,
 ) -> Result<(), String> {
     if state.debug {
-        println!("syncing profile: profile={profile:?}");
+        println!("syncing profile: profile={profile:?} dry_run={dry_run}");
     }
 
     let (tx, mut rx) = mpsc::unbounded_channel::<SyncOutcome>();
