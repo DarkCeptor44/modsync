@@ -2,9 +2,11 @@
 
 use crate::{
     AppState,
+    sync::{sync, types::SyncOutcome},
     types::{Profile, ProfileInput},
 };
-use tauri::State;
+use tauri::{AppHandle, Emitter, State};
+use tokio::{spawn, sync::mpsc};
 
 #[tauri::command]
 pub fn add_profile(state: State<'_, AppState>, profile: ProfileInput) -> Result<String, String> {
@@ -70,9 +72,27 @@ pub fn get_version() -> String {
 }
 
 #[tauri::command]
-pub async fn sync_profile(state: State<'_, AppState>, profile: Profile) -> Result<(), String> {
+pub async fn sync_profile(
+    app: AppHandle,
+    state: State<'_, AppState>,
+    profile: Profile,
+) -> Result<(), String> {
     if state.debug {
         println!("syncing profile: profile={profile:?}");
     }
-    Ok(())
+
+    let (tx, mut rx) = mpsc::unbounded_channel::<SyncOutcome>();
+    let app_handle = app.clone();
+    let listener = spawn(async move {
+        while let Some(outcome) = rx.recv().await {
+            let _ = app_handle.emit("sync-progress", outcome);
+        }
+    });
+
+    let result = sync(&profile, tx, num_cpus::get(), true)
+        .await
+        .map_err(|e| e.to_string());
+    let _ = listener.await;
+
+    result
 }

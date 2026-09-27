@@ -18,4 +18,5 @@ export type SyncAction =
 	| { Copied: { bytes: number } }
 	| { Removed: { bytes: number } }
 	| { Failed: { error: string } }
+	| 'RemovedDir'
 	| 'Skipped';
