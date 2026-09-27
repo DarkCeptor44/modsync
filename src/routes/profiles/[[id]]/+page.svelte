@@ -141,18 +141,17 @@
 
 	<form
 		onsubmit={handleSubmit}
-		class="flex flex-col gap-4 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6"
+		class="flex flex-col gap-2 rounded-xl border border-zinc-800 bg-zinc-900/60 p-6"
 	>
-		<div class="grid grid-cols-1 gap-2">
-			<InputField
-				id="profile-name"
-				label="Profile Name"
-				bind:value={name}
-				placeholder="PAYDAY 2"
-				required
-				autocomplete="off"
-			/>
-		</div>
+		<InputField
+			id="profile-name"
+			label="Profile Name"
+			bind:value={name}
+			placeholder="PAYDAY 2"
+			required
+			autocomplete="off"
+		/>
+
 		<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
 			<InputField
 				id="source-path"

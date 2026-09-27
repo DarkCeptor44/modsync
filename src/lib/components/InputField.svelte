@@ -48,7 +48,7 @@
 	}
 </script>
 
-<div class="flex w-full {row ? 'flex-row items-center justify-between gap-6' : 'flex-col gap-1.5'}">
+<div class="flex {row ? 'w-full flex-row items-center justify-between gap-6' : 'flex-col gap-1.5'}">
 	{#if label || subLabel}
 		<label for={id} class="flex flex-col gap-0.5 {row ? 'max-w-xl' : ''}">
 			<div class="flex items-center gap-1">
