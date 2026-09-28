@@ -3,6 +3,7 @@
 	import { onMount } from 'svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { DEV } from '$lib/utils';
+	import { t } from '$lib/i18n/index.svelte';
 
 	import InputField from '$lib/components/InputField.svelte';
 	import Button from '$lib/components/Button.svelte';
@@ -33,9 +34,9 @@
 		submitting = true;
 		try {
 			await appState.saveSettings({ jobs });
-			toast.show('Settings saved');
+			toast.show(t('settings.saved'));
 		} catch (err) {
-			toast.show(typeof err === 'string' ? err : 'Failed to save settings', 'error');
+			toast.show(typeof err === 'string' ? err : t('settings.failed'), 'error');
 		} finally {
 			submitting = false;
 		}
@@ -50,8 +51,8 @@
 
 <div class="mx-auto max-w-7xl space-y-6 sm:min-w-140 md:min-w-2xl">
 	<div>
-		<h1 class="text-xl font-bold text-zinc-100">Settings</h1>
-		<p class="text-xs text-zinc-400">Manage global settings</p>
+		<h1 class="text-xl font-bold text-zinc-100">{t('settings.title')}</h1>
+		<p class="text-xs text-zinc-400">{t('settings.subtitle')}</p>
 	</div>
 
 	<form
@@ -63,8 +64,8 @@
 				id="jobs"
 				type="number"
 				row
-				label="Parallel Jobs"
-				subLabel="Number of parallel operations. Defaults to 75% of available CPU cores, but higher values can be tried at your own risk of slowing down the computer."
+				label={t('settings.jobsLabel')}
+				subLabel={t('settings.jobsSubtitle')}
 				bind:value={jobs}
 				placeholder="e.g. 4"
 				min="1"
@@ -75,10 +76,12 @@
 
 		<div class="mt-3 flex justify-end gap-3">
 			{#if isDirty}
-				<Button variant="secondary" onclick={handleCancel} disabled={submitting}>Cancel</Button>
+				<Button variant="secondary" onclick={handleCancel} disabled={submitting}
+					>{t('common.cancel')}</Button
+				>
 			{/if}
 			<Button type="submit" disabled={submitting || !isDirty}
-				>{submitting ? 'Saving...' : 'Save Settings'}</Button
+				>{submitting ? t('common.saving') : t('settings.save')}</Button
 			>
 		</div>
 	</form>

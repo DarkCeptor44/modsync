@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { fade } from 'svelte/transition';
+	import { t } from '$lib/i18n/index.svelte';
 
 	import Button from './Button.svelte';
 	import InputField from './InputField.svelte';
@@ -32,7 +33,7 @@
 			{id}
 			{label}
 			bind:value={newExclusion}
-			placeholder="logs or log.txt (name not path)"
+			placeholder={t('form.exclusionsPlaceholder')}
 			autocomplete="off"
 		/>
 	</div>
@@ -40,7 +41,7 @@
 		variant="secondary"
 		onclick={addExclusion}
 		class="h-9.5 px-4"
-		disabled={!newExclusion.trim()}>Add</Button
+		disabled={!newExclusion.trim()}>{t('form.add')}</Button
 	>
 </div>
 

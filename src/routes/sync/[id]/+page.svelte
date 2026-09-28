@@ -5,6 +5,7 @@
 	import { toast } from '$lib/toast.svelte';
 	import { fade } from 'svelte/transition';
 	import { DEV } from '$lib/utils.js';
+	import { t } from '$lib/i18n/index.svelte';
 
 	import Textarea from '$lib/components/Textarea.svelte';
 	import Button from '$lib/components/Button.svelte';
@@ -38,9 +39,9 @@
 				}
 			});
 			appendLog('[SUCCESS] Sync completed.');
-			toast.show('Profile synced successfully');
+			toast.show(t('sync.synced'));
 		} catch (err) {
-			const errorMsg = typeof err === 'string' ? err : 'Failed to sync profile';
+			const errorMsg = typeof err === 'string' ? err : t('sync.failed');
 			appendLog(`[ERROR] ${errorMsg}`);
 			toast.show(errorMsg, 'error');
 		} finally {
@@ -70,7 +71,7 @@
 <div class="mb-6 flex items-center justify-between">
 	<div>
 		<div class="flex items-center gap-2">
-			<h1 class="text-xl font-bold text-zinc-100">Sync Profiles</h1>
+			<h1 class="text-xl font-bold text-zinc-100">{t('sync.title')}</h1>
 			{#if syncing}
 				<span class="flex h-3 w-3 items-center justify-center" transition:fade={{ duration: 100 }}>
 					<span class="relative flex h-2 w-2">
@@ -86,7 +87,7 @@
 	</div>
 
 	<a href="/" class="text-xs text-zinc-400 transition-colors duration-100 hover:text-zinc-200"
-		>&larr; Back to Profiles</a
+		>&larr; {t('common.back')}</a
 	>
 </div>
 
@@ -98,19 +99,25 @@
 				disabled={syncing}
 				bind:checked={dryRun}
 				checkedColorClass="bg-emerald-500"
-				uncheckedColorClass="bg-amber-500">Dry Run</Toggle
+				uncheckedColorClass="bg-amber-500">{t('sync.dryRun')}</Toggle
 			>
 			<Button onclick={handleSync} disabled={syncing} class="flex-1" textSize="text-sm">
-				{syncing ? (dryRun ? 'Simulating...' : 'Syncing...') : dryRun ? 'Simulate' : 'Sync Mods'}
+				{syncing
+					? dryRun
+						? t('sync.simulating')
+						: t('sync.syncing')
+					: dryRun
+						? t('sync.simulate')
+						: t('sync.sync')}
 			</Button>
 		</div>
 		<Textarea
 			bind:value={logOutput}
 			id="sync-progress"
-			label="Progress"
+			label={t('sync.logs')}
 			class="h-70"
 			readonly
-			placeholder="Sync output will appear here..."
+			placeholder={t('sync.logsPlaceholder')}
 		/>
 	</div>
 </div>

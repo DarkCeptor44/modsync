@@ -3,6 +3,7 @@
 	import { toast } from '$lib/toast.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import { t } from '$lib/i18n/index.svelte';
 
 	import Button from '$lib/components/Button.svelte';
 	import InputField from '$lib/components/InputField.svelte';
@@ -71,7 +72,7 @@
 					deleteExclusions
 				});
 
-				toast.show('Profile updated');
+				toast.show(t('form.updated'));
 
 				if (profileId !== newId) {
 					goto(`/profiles/${newId}`);
@@ -85,16 +86,12 @@
 					deleteExclusions
 				});
 
-				toast.show('Profile added');
+				toast.show(t('form.added'));
 				goto('/');
 			}
 		} catch (err) {
 			toast.show(
-				typeof err === 'string'
-					? err
-					: isEditing
-						? 'Failed to update profile'
-						: 'Failed to add profile',
+				typeof err === 'string' ? err : isEditing ? t('form.failedUpdate') : t('form.failedAdd'),
 				'error'
 			);
 		} finally {
@@ -106,7 +103,7 @@
 		if (!isEditing || !profileId) return;
 
 		console.log('deleting', profileId);
-		// goto('/');
+		// goto('/'); // TODO do delete
 	}
 
 	function handleCancel() {
@@ -128,14 +125,14 @@
 	<div class="flex items-center justify-between">
 		<div>
 			<h1 class="text-xl font-bold text-zinc-100">
-				{isEditing ? 'Edit Profile' : 'Create Profile'}
+				{isEditing ? t('form.titleEdit') : t('form.titleCreate')}
 			</h1>
 			{#if isEditing && profileId}
 				<p class="font-mono text-xs text-zinc-500">ID: {profileId}</p>
 			{/if}
 		</div>
 		<a href="/" class="text-xs text-zinc-400 transition-colors duration-100 hover:text-zinc-200"
-			>&larr; Back to Profiles</a
+			>&larr; {t('common.back')}</a
 		>
 	</div>
 
@@ -145,7 +142,7 @@
 	>
 		<InputField
 			id="profile-name"
-			label="Profile Name"
+			label={t('form.nameLabel')}
 			bind:value={name}
 			placeholder="PAYDAY 2"
 			required
@@ -155,7 +152,7 @@
 		<div class="grid grid-cols-1 gap-2 sm:grid-cols-2">
 			<InputField
 				id="source-path"
-				label="Source Path"
+				label={t('form.sourceLabel')}
 				bind:value={source}
 				placeholder="D:\Mods\Payday2"
 				required
@@ -164,7 +161,7 @@
 
 			<InputField
 				id="dest-path"
-				label="Destination Path"
+				label={t('form.destinationLabel')}
 				bind:value={destination}
 				placeholder="C:\Program Files\...\PAYDAY 2\mods"
 				required
@@ -174,32 +171,32 @@
 
 		<ExclusionForm
 			id="sync-exclusions"
-			label="Protected Paths In Sync"
+			label={t('form.exclusionsSyncLabel')}
 			bind:newExclusion={newSyncExclusion}
 			bind:exclusions={syncExclusions}
 		/>
 
 		<ExclusionForm
 			id="delete-exclusions"
-			label="Protected Paths In Delete"
+			label={t('form.exclusionsDeleteLabel')}
 			bind:newExclusion={newDeleteExclusion}
 			bind:exclusions={deleteExclusions}
 		/>
 
 		<div class="mt-3 flex items-center justify-between gap-2">
 			{#if isEditing}
-				<Button variant="danger" onclick={handleDelete}>Delete Profile</Button>
+				<Button variant="danger" onclick={handleDelete}>{t('form.delete')}</Button>
 			{:else}
 				<div></div>
 			{/if}
 
 			<div class="flex gap-3">
 				{#if hasAnyFields}
-					<Button variant="secondary" onclick={handleCancel}>Cancel</Button>
+					<Button variant="secondary" onclick={handleCancel}>{t('common.cancel')}</Button>
 				{/if}
 
 				<Button type="submit" disabled={!isValid}>
-					{isEditing ? 'Save Changes' : 'Create Profile'}
+					{isEditing ? t('form.editButton') : t('form.addButton')}
 				</Button>
 			</div>
 		</div>

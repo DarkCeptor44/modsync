@@ -2,6 +2,7 @@
 	import { appState } from '$lib/api.svelte';
 	import { onMount } from 'svelte';
 	import { DEV } from '$lib/utils';
+	import { t } from '$lib/i18n/index.svelte';
 
 	import Button from '$lib/components/Button.svelte';
 
@@ -16,11 +17,11 @@
 
 <div class="mb-6 flex items-center justify-between">
 	<div>
-		<h1 class="text-xl font-bold text-zinc-100">Game Profiles</h1>
-		<p class="text-xs text-zinc-400">Manage synchronization rules and paths</p>
+		<h1 class="text-xl font-bold text-zinc-100">{t('home.title')}</h1>
+		<p class="text-xs text-zinc-400">{t('home.subtitle')}</p>
 	</div>
 
-	<Button href="/profiles" textSize="text-sm">+ Add Profile</Button>
+	<Button href="/profiles" textSize="text-sm">{t('home.addButton')}</Button>
 </div>
 
 {#if appState.loading && appState.profiles.length === 0}
@@ -31,7 +32,7 @@
 	</div>
 {:else if appState.profiles.length === 0}
 	<div class="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/30 p-8 text-center">
-		<p class="text-xs text-zinc-400">No profiles found.</p>
+		<p class="text-xs text-zinc-400">{t('home.empty')}</p>
 	</div>
 {:else}
 	<div class="flex flex-col gap-3">
@@ -48,7 +49,7 @@
 							<span
 								class="rounded border border-zinc-800 bg-zinc-950 px-1.5 py-0.5 text-[10px] text-zinc-400"
 							>
-								{exclusions} exclusions
+								{t('home.exclusionCount', { count: exclusions.toString() })}
 							</span>
 						{/if}
 					</div>
@@ -60,8 +61,8 @@
 				</div>
 
 				<div class="flex shrink-0 items-center gap-2">
-					<Button href="/profiles/{profile.id}" textSize="text-xs">Edit</Button>
-					<Button href="/sync/{profile.id}" textSize="text-xs">Sync</Button>
+					<Button href="/profiles/{profile.id}" textSize="text-xs">{t('home.edit')}</Button>
+					<Button href="/sync/{profile.id}" textSize="text-xs">{t('home.sync')}</Button>
 				</div>
 			</div>
 		{/each}

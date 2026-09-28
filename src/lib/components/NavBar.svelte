@@ -2,8 +2,10 @@
 	import { page } from '$app/state';
 	import { invoke } from '@tauri-apps/api/core';
 	import { onMount } from 'svelte';
+	import { t } from '$lib/i18n/index.svelte';
 
-	let activeTab = $state('profiles');
+	import LangPicker from './LangPicker.svelte';
+
 	let version = $state('');
 
 	onMount(() => {
@@ -34,24 +36,27 @@
 			</div>
 		</div>
 
-		<nav class="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900/50 p-1">
-			<a
-				href="/"
-				class="cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-150 {navClass(
-					'/'
-				)}"
-			>
-				Profiles
-			</a>
-			<a
-				href="/settings"
-				onclick={() => (activeTab = 'settings')}
-				class="cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-150 {navClass(
-					'/settings'
-				)}"
-			>
-				Settings
-			</a>
-		</nav>
+		<div class="flex items-center gap-3">
+			<nav class="flex items-center gap-1 rounded-lg border border-zinc-800 bg-zinc-900/50 p-1">
+				<a
+					href="/"
+					class="cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-150 {navClass(
+						'/'
+					)}"
+				>
+					{t('navbar.profiles')}
+				</a>
+				<a
+					href="/settings"
+					class="cursor-pointer rounded-md px-3 py-1.5 text-xs font-medium transition-colors duration-150 {navClass(
+						'/settings'
+					)}"
+				>
+					{t('settings.title')}
+				</a>
+			</nav>
+
+			<LangPicker />
+		</div>
 	</div>
 </header>
