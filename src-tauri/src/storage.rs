@@ -127,7 +127,7 @@ pub async fn sync_profile(
         }
     });
 
-    let result = sync(&profile, tx, settings, true)
+    let result = sync(&profile, tx, settings, dry_run)
         .await
         .map_err(|e| e.to_string());
     let _ = listener.await;
