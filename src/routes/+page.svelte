@@ -6,6 +6,8 @@
 
 	import Button from '$lib/components/Button.svelte';
 
+	let profiles = $derived(appState.profiles.toSorted((a, b) => a.name.localeCompare(b.name)));
+
 	onMount(() => {
 		appState.fetchProfiles();
 
@@ -24,19 +26,19 @@
 	<Button href="/profiles" textSize="text-sm">{t('home.addButton')}</Button>
 </div>
 
-{#if appState.loading && appState.profiles.length === 0}
+{#if appState.loading && profiles.length === 0}
 	<div class="flex flex-col gap-3">
 		{#each Array(2) as _}
 			<div class="h-24 animate-pulse rounded-xl border border-zinc-800 bg-zinc-900/50 p-4"></div>
 		{/each}
 	</div>
-{:else if appState.profiles.length === 0}
+{:else if profiles.length === 0}
 	<div class="rounded-xl border border-dashed border-zinc-800 bg-zinc-900/30 p-8 text-center">
 		<p class="text-xs text-zinc-400">{t('home.empty')}</p>
 	</div>
 {:else}
 	<div class="flex flex-col gap-3">
-		{#each appState.profiles as profile (profile.id)}
+		{#each profiles as profile (profile.id)}
 			{@const exclusions = profile.syncExclusions.length + profile.deleteExclusions.length}
 
 			<div
