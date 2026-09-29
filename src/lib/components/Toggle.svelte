@@ -56,14 +56,14 @@
 	aria-checked={checked}
 	onclick={handleClick}
 	{disabled}
-	class="group flex cursor-pointer items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-900/80 px-3.5 py-2 font-medium transition-colors duration-100 hover:border-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 {textClass} {className}"
+	class="group flex items-center justify-between gap-3 rounded-lg border border-zinc-800 bg-zinc-900/80 px-3.5 py-2 font-medium transition-colors duration-100 enabled:cursor-pointer enabled:hover:border-zinc-700 disabled:cursor-not-allowed disabled:opacity-50 {textClass} {className}"
 >
-	<span class="text-zinc-300 transition-colors duration-100 group-hover:text-zinc-100">
+	<span class="text-zinc-300 transition-colors duration-100 enabled:group-hover:text-zinc-100">
 		{@render children()}
 	</span>
 
 	<span
-		class="relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-100 ease-in-out focus:outline-none {checked
+		class="relative inline-flex h-5 w-9 shrink-0 rounded-full border-2 border-transparent transition-colors duration-100 ease-in-out focus:outline-none enabled:cursor-pointer {checked
 			? checkedColorClass
 			: uncheckedColorClass}"
 	>
