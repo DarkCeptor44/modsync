@@ -1,10 +1,10 @@
 <script lang="ts">
 	import type { SyncOutcome } from '$lib/types.js';
+	import { DEV, humanBytes } from '$lib/utils.js';
 	import { appState } from '$lib/api.svelte';
 	import { onMount } from 'svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { fade } from 'svelte/transition';
-	import { DEV } from '$lib/utils.js';
 	import { t } from '$lib/i18n/index.svelte';
 
 	import Textarea from '$lib/components/Textarea.svelte';
@@ -61,8 +61,8 @@
 			if (action === 'RemovedDir') return `- ${out.entry}`;
 			return '';
 		}
-		if ('Copied' in action) return `+ ${out.entry} (${action.Copied.bytes} bytes)`;
-		if ('Removed' in action) return `- ${out.entry} (${action.Removed.bytes} bytes)`;
+		if ('Copied' in action) return `+ ${out.entry} (${humanBytes(action.Copied.bytes)})`;
+		if ('Removed' in action) return `- ${out.entry} (${humanBytes(action.Removed.bytes)})`;
 		if ('Failed' in action) return `x ${out.entry}: ${action.Failed.error}`;
 		return '';
 	}
