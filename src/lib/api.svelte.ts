@@ -24,6 +24,11 @@ class AppState {
 		}
 	}
 
+	clearOutcomes() {
+		this.outcomes = [];
+		this.currentOutcome = null;
+	}
+
 	async deleteProfile(id: string) {
 		try {
 			await invoke('delete_profile', { id });
@@ -101,6 +106,8 @@ class AppState {
 		onProgress?: (outcome: SyncOutcome) => void
 	) {
 		let unlisten: UnlistenFn | undefined;
+
+		this.clearOutcomes();
 
 		try {
 			unlisten = await listen<SyncOutcome>('sync-progress', (event) => {

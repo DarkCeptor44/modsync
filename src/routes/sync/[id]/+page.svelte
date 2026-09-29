@@ -1,15 +1,15 @@
 <script lang="ts">
-	import type { SyncOutcome } from '$lib/types.js';
-	import { DEV, humanBytes } from '$lib/utils.js';
+	import type { Log } from '$lib/components/LogBox.svelte';
+	import { DEV } from '$lib/utils.js';
 	import { appState } from '$lib/api.svelte';
 	import { onMount } from 'svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { fade } from 'svelte/transition';
 	import { t } from '$lib/i18n/index.svelte';
 
-	import Textarea from '$lib/components/Textarea.svelte';
 	import Button from '$lib/components/Button.svelte';
 	import Toggle from '$lib/components/Toggle.svelte';
+	import LogBox from '$lib/components/LogBox.svelte';
 
 	let { data } = $props();
 	const profile = $derived(data.profile);
@@ -22,49 +22,42 @@
 
 	let syncing = $state(false);
 	let dryRun = $state(false);
-	let logOutput = $state('');
+	let showSkipped = $state(false);
+	let logs = $derived<Log[]>([]);
 
 	async function handleSync() {
 		if (syncing) return;
 
-		logOutput = '';
+		logs = [];
+		appState.clearOutcomes();
 		syncing = true;
-		appendLog(`[INFO] Starting sync for profile: ${profile.name}`);
+
+		logs = [
+			...logs,
+			{
+				kind: 'system',
+				level: 'info',
+				message: `Starting sync for profile ${profile.name}`
+			}
+		];
 
 		try {
 			await appState.syncProfile(profile, dryRun, (out) => {
-				const formatted = formatOutcome(out);
-				if (formatted) {
-					appendLog(formatted);
-				}
+				logs = [...logs, { kind: 'outcome', outcome: out }];
 			});
-			appendLog('[SUCCESS] Sync completed.');
+
+			logs = [
+				...logs,
+				{ kind: 'system', level: 'success', message: 'Sync completed successfully.' }
+			];
 			toast.show(t('sync.synced'));
 		} catch (err) {
 			const errorMsg = typeof err === 'string' ? err : t('sync.failed');
-			appendLog(`[ERROR] ${errorMsg}`);
+			logs = [...logs, { kind: 'system', level: 'error', message: errorMsg }];
 			toast.show(errorMsg, 'error');
 		} finally {
 			syncing = false;
 		}
-	}
-
-	function appendLog(message: string) {
-		logOutput = logOutput
-			? `${logOutput}\n${dryRun ? '[DRY-RUN] ' : ''}${message}`
-			: `${dryRun ? '[DRY-RUN] ' : ''}${message}`;
-	}
-
-	function formatOutcome(out: SyncOutcome): string {
-		const action = out.action;
-		if (typeof action === 'string') {
-			if (action === 'RemovedDir') return `- ${out.entry}`;
-			return '';
-		}
-		if ('Copied' in action) return `+ ${out.entry} (${humanBytes(action.Copied.bytes)})`;
-		if ('Removed' in action) return `- ${out.entry} (${humanBytes(action.Removed.bytes)})`;
-		if ('Failed' in action) return `x ${out.entry}: ${action.Failed.error}`;
-		return '';
 	}
 </script>
 
@@ -95,12 +88,13 @@
 	<div class="grid grid-cols-1 gap-4">
 		<div class="flex items-center gap-3">
 			<Toggle
-				id="dry-run-sync"
+				id="sync-dry-run"
 				disabled={syncing}
 				bind:checked={dryRun}
 				checkedColorClass="bg-emerald-500"
 				uncheckedColorClass="bg-amber-500">{t('sync.dryRun')}</Toggle
 			>
+			<Toggle id="sync-show-skip" bind:checked={showSkipped}>{t('sync.showSkipped')}</Toggle>
 			<Button onclick={handleSync} disabled={syncing} class="flex-1" textSize="text-sm">
 				{syncing
 					? dryRun
@@ -111,13 +105,6 @@
 						: t('sync.sync')}
 			</Button>
 		</div>
-		<Textarea
-			bind:value={logOutput}
-			id="sync-progress"
-			label={t('sync.logs')}
-			class="h-70"
-			readonly
-			placeholder={t('sync.logsPlaceholder')}
-		/>
+		<LogBox id="sync-progress" {logs} label={t('sync.logs')} {dryRun} {showSkipped} />
 	</div>
 </div>

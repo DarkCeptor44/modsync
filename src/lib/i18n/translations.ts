@@ -53,9 +53,11 @@ export const translations = {
 		},
 		sync: {
 			dryRun: 'Dry Run',
+			dryRunActive: 'Dry Run Active',
 			failed: 'Failed to sync profile',
 			logs: 'Logs',
 			logsPlaceholder: 'Sync output will appear here...',
+			showSkipped: 'Show Skipped Files',
 			simulate: 'Simulate',
 			simulating: 'Simulating...',
 			sync: 'Sync Mods',
@@ -119,9 +121,11 @@ export const translations = {
 		},
 		sync: {
 			dryRun: 'Simulação',
+			dryRunActive: 'Simulação Ativa',
 			failed: 'Falha ao sincronizar perfil',
 			logs: 'Logs',
 			logsPlaceholder: 'Os logs da sincronização aparecerão aqui...',
+			showSkipped: 'Mostrar Arquivos Ignorados',
 			simulate: 'Simular',
 			simulating: 'Simulando...',
 			sync: 'Sincronizar Mods',
