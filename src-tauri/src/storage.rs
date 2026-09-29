@@ -32,6 +32,24 @@ pub fn add_profile(state: State<'_, AppState>, profile: ProfileInput) -> Result<
 }
 
 #[tauri::command]
+pub fn delete_profile(state: State<'_, AppState>, id: String) -> Result<(), String> {
+    if id.trim().is_empty() {
+        return Err("Profile ID cannot be empty".to_string());
+    }
+
+    let mut config = state.config.lock();
+    let Some(removed_profile) = config.profiles.remove(&id) else {
+        return Err("Profile not found".to_string());
+    };
+
+    if state.debug {
+        println!("deleted profile: id={id} removed_profile={removed_profile:?}");
+    }
+
+    Ok(())
+}
+
+#[tauri::command]
 pub fn edit_profile(state: State<'_, AppState>, profile: Profile) -> Result<String, String> {
     if profile.id.trim().is_empty() {
         return Err("Profile ID cannot be empty".to_string());

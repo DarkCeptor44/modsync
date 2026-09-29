@@ -4,6 +4,7 @@
 	import { DEV } from '$lib/utils';
 
 	import ToastProvider from '$lib/components/ToastProvider.svelte';
+	import ConfirmModal from '$lib/components/ConfirmModal.svelte';
 	import NavBar from '$lib/components/NavBar.svelte';
 
 	onMount(() => {
@@ -14,6 +15,8 @@
 
 	let { children } = $props();
 </script>
+
+<ConfirmModal />
 
 <ToastProvider />
 

@@ -24,6 +24,20 @@ class AppState {
 		}
 	}
 
+	async deleteProfile(id: string) {
+		try {
+			await invoke('delete_profile', { id });
+			if (DEV) {
+				console.log('deleted profile', id);
+			}
+
+			this.profiles = this.profiles.filter((p) => p.id !== id);
+		} catch (err) {
+			console.error('Failed to delete profile:', err);
+			throw err;
+		}
+	}
+
 	async editProfile(profile: Profile): Promise<string> {
 		try {
 			const newId = await invoke<string>('edit_profile', { profile });

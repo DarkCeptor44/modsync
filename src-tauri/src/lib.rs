@@ -9,8 +9,8 @@ mod types;
 use crate::{
     config::Data,
     storage::{
-        add_profile, edit_profile, get_profiles, get_settings, get_version, save_settings,
-        sync_profile,
+        add_profile, delete_profile, edit_profile, get_profiles, get_settings, get_version,
+        save_settings, sync_profile,
     },
 };
 use anyhow::{Context, Result};
@@ -41,6 +41,7 @@ pub fn run(debug: bool) -> Result<()> {
         .plugin(tauri_plugin_opener::init())
         .invoke_handler(tauri::generate_handler![
             add_profile,
+            delete_profile,
             edit_profile,
             get_settings,
             get_profiles,

@@ -4,7 +4,7 @@
 </script>
 
 <div
-	class="pointer-events-none fixed top-4 left-1/2 z-9999 flex w-full max-w-sm -translate-x-1/2 flex-col gap-2 px-4"
+	class="pointer-events-none fixed top-4 left-1/2 z-9980 flex w-full max-w-sm -translate-x-1/2 flex-col gap-2 px-4"
 >
 	{#each toast.items as item (item.id)}
 		{@const isSuccess = item.type === 'success'}

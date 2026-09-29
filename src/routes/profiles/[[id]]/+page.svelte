@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { appState } from '$lib/api.svelte';
+	import { confirm } from '$lib/confirm.svelte';
 	import { toast } from '$lib/toast.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -102,8 +103,23 @@
 	async function handleDelete() {
 		if (!isEditing || !profileId) return;
 
-		console.log('deleting', profileId);
-		// goto('/'); // TODO do delete
+		const confirmed = await confirm.show({
+			title: t('form.titleDelete'),
+			message: t('form.messageDelete'),
+			itemName: profileId,
+			confirmText: t('form.confirmDelete'),
+			variant: 'danger'
+		});
+
+		if (!confirmed) return;
+
+		try {
+			await appState.deleteProfile(profileId);
+			toast.show(t('form.deleted'));
+			goto('/');
+		} catch (err) {
+			toast.show(typeof err === 'string' ? err : t('form.failedDelete'), 'error');
+		}
 	}
 
 	function handleCancel() {
