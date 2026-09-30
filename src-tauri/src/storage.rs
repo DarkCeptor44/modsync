@@ -46,6 +46,7 @@ pub fn delete_profile(state: State<'_, AppState>, id: String) -> Result<(), Stri
         return Err("Profile not found".to_string());
     };
 
+    config.save().map_err(|e| e.to_string())?;
     if state.debug {
         println!("deleted profile: id={id} removed_profile={removed_profile:?}");
     }
