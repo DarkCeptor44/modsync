@@ -373,7 +373,7 @@ mod tests {
         write(full_path.join("file1.txt"), b"some data")
             .await
             .unwrap();
-        assert!(relative_entry.is_dir());
+        assert!(full_path.is_dir());
 
         let outcome = handle_dir_removal(base, relative_entry, false).await;
         assert!(
