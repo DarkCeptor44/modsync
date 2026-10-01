@@ -2,6 +2,14 @@
 All notable changes to this project will be documented in this file. See [conventional commits](https://www.conventionalcommits.org/) for commit guidelines.
 
 - - -
+## [v0.2.0](https://github.com/DarkCeptor44/modsync/compare/9e0871ae930eb6d9b8ad8303141370cdfc0d1230..v0.2.0) - 2026-10-01
+#### Performance
+- (**backend**) use buffer_unordered instead of unbounded semaphore for sync logic - ([5090f34](https://github.com/DarkCeptor44/modsync/commit/5090f34b9bff7832eca2d6af95d92e9e447ae4d1)) - DarkCeptor44
+#### Refactors
+- (**backend**) add glob support for exclusions - ([9e0871a](https://github.com/DarkCeptor44/modsync/commit/9e0871ae930eb6d9b8ad8303141370cdfc0d1230)) - DarkCeptor44
+
+- - -
+
 ## [v0.1.0](https://github.com/DarkCeptor44/modsync/compare/3f8fa7742d79df79b59c226978a149cee7da6b37..v0.1.0) - 2026-09-30
 #### Features
 - (**frontend**) add toast component - ([bca1d55](https://github.com/DarkCeptor44/modsync/commit/bca1d55e03bf1dc71d5fc05364f5391cd53e4312)) - DarkCeptor44
