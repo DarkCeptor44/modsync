@@ -28,7 +28,7 @@ The minimum supported Rust version is:
 
 | Version | Edition | MSRV |
 | --- | --- | --- |
-| `<= 0.1.0` | 2024 | 1.98.0 |
+| `<= 0.2.0` | 2024 | 1.98.0 |
 
 ## Environment Variables
 
@@ -42,7 +42,7 @@ The following environment variables are currently supported:
 
 | Auditor | Audit Date | Version | Vulnerabilities |
 | --- | --- | --- | --- |
-| [cargo-audit](https://crates.io/crates/cargo-audit) | 2026-09-30 | 0.1.0 | 2* |
+| [cargo-audit](https://crates.io/crates/cargo-audit) | 2026-10-01 | 0.2.0 | 2* |
 
 - Although these are technically considered vulnerabilities, I personally wouldn't worry about unmaintained or unsound crates. Besides it's on Tauri's side, if they update the dependencies I'll update Tauri.
 
