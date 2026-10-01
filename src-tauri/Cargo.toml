@@ -27,6 +27,7 @@ clap = { version = "4.6.7", features = ["derive", "env"] }
 colored = "3.1.1"
 configura = "1.1.0"
 dotenvy = "0.15.7"
+futures = "0.3.34"
 globset = { version = "0.4.20", features = ["simd-accel"] }
 heck = "0.5.0"
 num-traits = "0.2.19"
@@ -36,19 +37,14 @@ serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"
 tauri = { version = "=2.12.0", features = [] }
 tauri-plugin-opener = "=2.6.0"
-tokio = { version = "1.53.1", features = [
-    "fs",
-    "macros",
-    "rt-multi-thread",
-    "sync",
-    "time",
-] }
+tokio = { version = "1.53.1", features = ["fs", "macros", "rt-multi-thread"] }
 twox-hash = "2.1.4"
 walkdir = "2.5.0"
 
 [dev-dependencies]
 divan = "0.1.21"
 tempfile = "3.27.0"
+tokio = { version = "1.53.1", features = ["time"] }
 
 [[bench]]
 name = "compare"
