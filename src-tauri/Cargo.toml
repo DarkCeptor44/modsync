@@ -27,6 +27,7 @@ clap = { version = "4.6.7", features = ["derive", "env"] }
 colored = "3.1.1"
 configura = "1.1.0"
 dotenvy = "0.15.7"
+globset = { version = "0.4.20", features = ["simd-accel"] }
 heck = "0.5.0"
 num-traits = "0.2.19"
 num_cpus = "1.17.0"

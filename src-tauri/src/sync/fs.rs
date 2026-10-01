@@ -7,6 +7,7 @@ use crate::sync::{
     types::{SyncAction, SyncOutcome},
 };
 use anyhow::{Context, Result, anyhow};
+use globset::{Glob, GlobSet, GlobSetBuilder};
 use std::{
     collections::HashSet,
     fs::read_dir,
@@ -17,6 +18,29 @@ use tokio::{
     task::spawn_blocking,
 };
 use walkdir::WalkDir;
+
+fn build_exclusion_set(exclusions: &[String]) -> Result<GlobSet> {
+    let mut builder = GlobSetBuilder::new();
+
+    for pattern in exclusions {
+        let pattern = pattern.trim();
+        if pattern.is_empty() {
+            continue;
+        }
+
+        let glob = Glob::new(pattern).context(anyhow!("Invalid glob pattern: {pattern}"))?;
+        builder.add(glob);
+
+        if !pattern.contains('/') && !pattern.contains('\\') {
+            let component_pattern = format!("**/{pattern}");
+            if let Ok(glob) = Glob::new(&component_pattern) {
+                builder.add(glob);
+            }
+        }
+    }
+
+    builder.build().context("Failed to build GlobSet")
+}
 
 /// Collect empty directories
 ///
@@ -32,9 +56,9 @@ use walkdir::WalkDir;
 /// ## Returns
 ///
 /// Set of empty directories
-pub async fn collect_empty_dirs(root: &Path, exclusions: &[PathBuf]) -> Result<HashSet<PathBuf>> {
+pub async fn collect_empty_dirs(root: &Path, exclusions: &[String]) -> Result<HashSet<PathBuf>> {
     let root = root.to_path_buf();
-    let exclusions = exclusions.to_vec();
+    let glob_set = build_exclusion_set(exclusions)?;
 
     spawn_blocking(move || {
         let mut set = HashSet::new();
@@ -50,7 +74,7 @@ pub async fn collect_empty_dirs(root: &Path, exclusions: &[PathBuf]) -> Result<H
                 continue;
             };
 
-            if exclusions.iter().any(|ex| rel.starts_with(ex) || rel == ex) {
+            if is_excluded(rel, &glob_set) {
                 continue;
             }
 
@@ -79,9 +103,9 @@ pub async fn collect_empty_dirs(root: &Path, exclusions: &[PathBuf]) -> Result<H
 /// ## Returns
 ///
 /// Set of files
-pub async fn collect_files(root: &Path, exclusions: &[PathBuf]) -> Result<HashSet<PathBuf>> {
+pub async fn collect_files(root: &Path, exclusions: &[String]) -> Result<HashSet<PathBuf>> {
     let root = root.to_path_buf();
-    let exclusions = exclusions.to_vec();
+    let glob_set = build_exclusion_set(exclusions)?;
 
     spawn_blocking(move || {
         let mut set = HashSet::new();
@@ -91,7 +115,7 @@ pub async fn collect_files(root: &Path, exclusions: &[PathBuf]) -> Result<HashSe
             .into_iter()
             .filter_entry(|e| {
                 if let Ok(rel) = e.path().strip_prefix(&root) {
-                    !exclusions.iter().any(|ex| rel.starts_with(ex))
+                    !is_excluded(rel, &glob_set)
                 } else {
                     true
                 }
@@ -198,6 +222,20 @@ pub async fn handle_dir_removal(base: &Path, entry: &Path, dry_run: bool) -> Syn
 
 fn is_dir_empty(path: &Path) -> bool {
     read_dir(path).is_ok_and(|mut entries| entries.next().is_none())
+}
+
+fn is_excluded(rel_path: &Path, glob_set: &GlobSet) -> bool {
+    if glob_set.is_match(rel_path) {
+        return true;
+    }
+
+    for component in rel_path.components() {
+        if glob_set.is_match(component.as_os_str()) {
+            return true;
+        }
+    }
+
+    false
 }
 
 /// Link or copy file
@@ -322,7 +360,7 @@ mod tests {
         create_dir_all(root.join("subfolder")).await.unwrap();
         create_dir_all(root.join("excluded_folder")).await.unwrap();
 
-        let exclusions = vec![PathBuf::from("excluded_folder")];
+        let exclusions = vec!["excluded_folder".to_string()];
         let dirs = collect_empty_dirs(root, &exclusions).await.unwrap();
 
         assert_eq!(dbg!(&dirs).len(), 1);
@@ -347,10 +385,7 @@ mod tests {
             .unwrap();
         write(root.join("skip_me.log"), "data").await.unwrap();
 
-        let exclusions = vec![
-            PathBuf::from("excluded_folder"),
-            PathBuf::from("skip_me.log"),
-        ];
+        let exclusions = vec!["excluded_folder".to_string(), "skip_me.log".to_string()];
 
         let files = collect_files(root, &exclusions).await.unwrap();
 

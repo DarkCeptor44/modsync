@@ -12,8 +12,8 @@ pub struct Profile {
     pub name: String,
     pub source: PathBuf,
     pub destination: PathBuf,
-    pub sync_exclusions: Vec<PathBuf>,
-    pub delete_exclusions: Vec<PathBuf>,
+    pub sync_exclusions: Vec<String>,
+    pub delete_exclusions: Vec<String>,
 }
 
 impl From<(String, ProfileInput)> for Profile {
@@ -35,8 +35,8 @@ pub struct ProfileInput {
     pub name: String,
     pub source: PathBuf,
     pub destination: PathBuf,
-    pub sync_exclusions: Vec<PathBuf>,
-    pub delete_exclusions: Vec<PathBuf>,
+    pub sync_exclusions: Vec<String>,
+    pub delete_exclusions: Vec<String>,
 }
 
 impl From<Profile> for ProfileInput {
